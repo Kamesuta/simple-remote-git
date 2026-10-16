@@ -22,7 +22,7 @@ def git(cwd, *args):
 
 def make_repo(root: Path, name: str) -> Path:
     d = root / name
-    d.mkdir()
+    d.mkdir(parents=True)
     git(d, "init", "-q", "-b", "main")
     (d / "a.txt").write_text("1")
     git(d, "add", ".")
@@ -62,6 +62,15 @@ class ListRepos(unittest.TestCase):
         (old / ".git" / "FETCH_HEAD").write_text("")
         touch(old / ".git" / "FETCH_HEAD", time.time() + 100)
         self.assertEqual(gitdata.list_repos(self.root)[0]["name"], "mid")
+
+    def test_dive_one_level_into_plain_folders(self):
+        make_repo(self.root, "top")
+        make_repo(self.root, "bundle/inner")
+        make_repo(self.root, "top/sub")  # リポの中のリポは潜らない
+        make_repo(self.root, "a/b/deep")  # 2 階層下は探さない
+        names = {r["name"] for r in gitdata.list_repos(self.root)}
+        self.assertEqual(names, {"top", "bundle/inner"})
+        self.assertEqual(gitdata.resolve("bundle/inner", self.root), self.root / "bundle" / "inner")
 
     def test_resolve_only_listed_names(self):
         make_repo(self.root, "ok")

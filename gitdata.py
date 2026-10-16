@@ -56,11 +56,13 @@ def list_repos(root: Path = ROOT, n: int = RECENT) -> list[dict]:
     """最近使ったリポ n 個。新しい順。"""
     found = []
     for d in root.iterdir():
-        g = d / ".git"
-        if g.is_dir():  # .git がファイルの worktree そのものは本体と重なるので数えない
-            found.append((last_used(g), d))
+        # games のようにリポを束ねるだけのフォルダは、1 階層だけ潜る
+        for c in [d] if (d / ".git").exists() else (d.iterdir() if d.is_dir() else []):
+            if (c / ".git").is_dir():  # .git がファイルの worktree そのものは本体と重なるので数えない
+                found.append((last_used(c / ".git"), c))
     found.sort(key=lambda t: t[0], reverse=True)
-    return [{"name": d.name, "lastUsed": int(t), "github": github_url(_origin(d))}
+    # 潜ったものは「束ね/リポ」の名前になる。resolve は root / name のまま引ける
+    return [{"name": d.relative_to(root).as_posix(), "lastUsed": int(t), "github": github_url(_origin(d))}
             for t, d in found[:n]]
 
 

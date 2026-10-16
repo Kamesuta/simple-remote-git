@@ -1,8 +1,9 @@
 // 行とチップの HTML を作る。見た目は Design キャンバス(Main.dc.html)のとおり。
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-// 見出しは GitHub のリポ名(無ければフォルダ名)。my-app のようにフォルダ名と違うことがある
-export const label = (r) => (r.github ? r.github.split("/").pop() : r.name);
+// 見出しは GitHub のリポ名(無ければフォルダ名)。my-app のようにフォルダ名と違うことがある。
+// 束ねるフォルダの下のリポ(games/server)は、チップが長くならないよう末尾だけ
+export const label = (r) => (r.github ?? r.name).split("/").pop();
 
 export function ago(t) {
   const d = Math.max(0, Date.now() / 1000 - t);
