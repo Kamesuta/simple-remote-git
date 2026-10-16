@@ -1,0 +1,152 @@
+/* 色は Design キャンバス(simple-remote-git)のライト/ダークをそのまま移したもの。
+   レーンの色は明るさもずらしてある(色相だけに頼らない) */
+:root {
+  --bg: #F6F6F3; --surface: #FFFFFF; --ink: #17191C; --muted: #596068; --line: #E3E3DE;
+  --accent: #2457D6; --err: #B42318; --err-bg: #FDEDEA;
+  --wip: #7D848D; --wip-bg: #EDF6F0; --stash-bg: #F3F0FA; --stash-ink: #6D4FC2;
+  --l0: #2457D6; --l1: #C2410C; --l2: #0F766E; --l3: #7C3AED; --l4: #BE185D; --l5: #8A6A00; --l6: #15803D; --l7: #475569;
+  --head-bg: #0F7B5A; --head-fg: #FFFFFF;
+  --wt-bg: #E2F3EA; --wt-fg: #0B5A41; --wt-bd: #93CDB2;
+  --local-bg: #FFFFFF; --local-bd: #B8BCC3; --remote-bd: #A9AEB6;
+  --tag-bg: #FFF3D1; --tag-fg: #6E5200; --tag-bd: #F0D98A;
+  --stash-chip-bg: #EDE7FB; --stash-chip-fg: #4B2D8F; --stash-chip-bd: #C9B8F0;
+  --repo-bd: #D5D6D1; --repo-sel-bg: #17191C; --repo-sel-fg: #FFFFFF;
+  --row: 64px;
+  color-scheme: light;
+}
+/* ダークかどうかは index.html の頭で data-theme に決めてある(自動なら端末の設定に合わせる) */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0E1012; --surface: #16191D; --ink: #E8EAED; --muted: #9AA1A9; --line: #252A30;
+  --accent: #7EA6FF; --err: #FF8F85; --err-bg: #2A1614;
+  --wip: #79818B; --wip-bg: #121D18; --stash-bg: #1A1626; --stash-ink: #B9A2FF;
+  --l0: #7EA6FF; --l1: #FB9A4B; --l2: #2DD4BF; --l3: #B99CFF; --l4: #F472B6; --l5: #E3C04B; --l6: #5EE38B; --l7: #A3B1C2;
+  --head-bg: #5ED3A0; --head-fg: #0E1012;
+  --wt-bg: #12291F; --wt-fg: #7FD9B0; --wt-bd: #2B5A45;
+  --local-bg: #16191D; --local-bd: #4A5059; --remote-bd: #4A5059;
+  --tag-bg: #2E2610; --tag-fg: #E3C04B; --tag-bd: #5A4A1A;
+  --stash-chip-bg: #231C36; --stash-chip-fg: #C3AEFF; --stash-chip-bd: #43376A;
+  --repo-bd: #343A42; --repo-sel-bg: #E8EAED; --repo-sel-fg: #0E1012;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: 'IBM Plex Sans JP', 'Hiragino Sans', system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+}
+svg path, svg circle { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* 上の帯。縦スクロールしても残す */
+.top {
+  position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top);
+}
+.title { display: flex; align-items: center; gap: 12px; padding: 14px 8px 6px 16px; }
+/* 左上の印はテーマの切り替えボタンを兼ねる(自動 → ライト → ダーク) */
+.theme-btn {
+  width: 44px; height: 44px; flex-shrink: 0; margin: 0 -10px 0 -10px; padding: 0; border: 0; border-radius: 12px;
+  background: transparent; color: var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+}
+.theme-btn:active { background: var(--line); }
+.mark { flex-shrink: 0; }
+.theme-label { font-size: 9px; line-height: 10px; font-weight: 600; color: var(--muted); }
+.names { flex: 1; min-width: 0; }
+.names h1 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+.names p { margin: 0; font-size: 12px; line-height: 16px; color: var(--muted); }
+.names h1, .names p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn {
+  width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center;
+  border: 0; border-radius: 22px; background: transparent; color: var(--ink); padding: 0;
+}
+.icon-btn:active { background: var(--line); }
+
+.repos { display: flex; gap: 8px; padding: 6px 16px 8px; overflow-x: auto; scrollbar-width: none; }
+.repos::-webkit-scrollbar { display: none; }
+.repos button {
+  height: 44px; padding: 0 16px; border-radius: 22px; flex-shrink: 0; font: inherit; font-size: 14px; font-weight: 500;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--repo-bd);
+}
+.repos button[aria-pressed="true"] { background: var(--repo-sel-bg); color: var(--repo-sel-fg); border-color: var(--repo-sel-bg); }
+
+.status {
+  display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 16px;
+  font-size: 12px; line-height: 16px; color: var(--muted); border-top: 1px solid var(--line);
+}
+.st-text { flex: 1; min-width: 0; padding: 8px 0; }
+.st-icon { flex-shrink: 0; display: none; }
+.st-icon path { stroke-width: 2.5; }
+.status[data-state="done"] .st-done, .status[data-state="busy"] .st-busy, .status[data-state="err"] .st-err { display: block; }
+.status[data-state="busy"] { color: var(--accent); }
+.status[data-state="err"] { color: var(--err); background: var(--err-bg); }
+.st-busy { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.retry {
+  display: none; height: 28px; padding: 0 12px; border-radius: 14px; flex-shrink: 0;
+  border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; font-weight: 500;
+}
+.status[data-state="err"] .retry { display: block; }
+.count { flex-shrink: 0; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+.bar { height: 2px; margin-top: -2px; overflow: hidden; position: relative; }
+.top:has(.status[data-state="busy"]) .bar::after {
+  content: ""; position: absolute; top: 0; width: 120px; height: 2px; background: var(--accent);
+  animation: slide 1.3s linear infinite;
+}
+@keyframes slide { from { left: -120px; } to { left: 100%; } }
+
+/* グラフ:縦長の SVG 1 枚を行リストの左に重ねる。幅は画面の 40% で切る */
+.graph { position: relative; padding-bottom: env(safe-area-inset-bottom); }
+.lanes { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; z-index: 1; pointer-events: none; }
+.lanes svg { display: block; }
+.g-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke: var(--lc); }
+.g-dash { stroke-dasharray: 1 5; }
+.g-dot { fill: var(--lc); stroke: var(--bg); stroke-width: 2; }
+.g-merge { fill: var(--bg); stroke: var(--lc); stroke-width: 2; }
+.g-wipdot { fill: var(--wip-bg); stroke: var(--wip); stroke-width: 2; stroke-dasharray: 2.6 2.6; }
+.g-stash { fill: var(--stash-bg); stroke: var(--stash-ink); stroke-width: 2; }
+.g-wip { --lc: var(--wip); }
+.g-c0 { --lc: var(--l0); } .g-c1 { --lc: var(--l1); } .g-c2 { --lc: var(--l2); } .g-c3 { --lc: var(--l3); }
+.g-c4 { --lc: var(--l4); } .g-c5 { --lc: var(--l5); } .g-c6 { --lc: var(--l6); } .g-c7 { --lc: var(--l7); }
+
+.row { display: flex; height: var(--row); color: inherit; text-decoration: none; }
+.row.wip { background: var(--wip-bg); }
+.row.stash { background: var(--stash-bg); }
+a.row:active { background: var(--line); }
+.txt {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  padding: 0 16px 0 6px; border-bottom: 1px solid var(--line);
+}
+.subj {
+  font-size: 14px; line-height: 19px; max-height: 38px; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere;
+}
+.row.head .subj { font-weight: 600; }
+.row.wip .subj { font-weight: 600; }
+.row.stash .subj { font-weight: 500; }
+.meta {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 18px; color: var(--muted);
+  white-space: nowrap; overflow: hidden;
+}
+.meta .who { overflow: hidden; text-overflow: ellipsis; }
+.meta .end { margin-left: auto; flex-shrink: 0; }
+.sha { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; }
+.more { flex-shrink: 0; font-size: 11px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 3px; flex-shrink: 1; min-width: 0; max-width: 132px;
+  height: 18px; padding: 0 7px; border-radius: 9px; font-size: 11px; line-height: 16px; border: 1px solid;
+}
+.chip > span { overflow: hidden; text-overflow: ellipsis; }
+.chip svg { flex-shrink: 0; }
+.chip svg path { stroke-width: 2.4; }
+/* HEAD とワークツリーは名前を読ませたいので縮めない(長い名前は max-width で切る) */
+.chip.head, .chip.wt { flex-shrink: 0; }
+.chip.head { background: var(--head-bg); color: var(--head-fg); border-color: var(--head-bg); font-weight: 600; }
+.chip.wt { background: var(--wt-bg); color: var(--wt-fg); border-color: var(--wt-bd); font-weight: 500; }
+.chip.local { background: var(--local-bg); color: var(--ink); border-color: var(--local-bd); }
+.chip.remote { background: transparent; color: var(--muted); border: 1px dashed var(--remote-bd); }
+.chip.tag { background: var(--tag-bg); color: var(--tag-fg); border-color: var(--tag-bd); }
+.chip.stash { background: var(--stash-chip-bg); color: var(--stash-chip-fg); border-color: var(--stash-chip-bd); font-weight: 500; flex-shrink: 0; }
+.row.wip .chip.wt { max-width: 190px; }
+
+.empty { padding: 48px 24px; text-align: center; color: var(--muted); font-size: 14px; }
