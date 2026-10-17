@@ -6,9 +6,12 @@
 import subprocess
 from dataclasses import dataclass
 
+import diffs
 import gitdata
+import gitshow
 import pushstate
 import safe
+import wipfiles
 import worktree
 
 
@@ -48,7 +51,30 @@ def fetch(q):
     return res if res["ok"] else (502, res)
 
 
-GET = {"/api/repos": repos, "/api/graph": graph}
+def commit(q):
+    return gitshow.commit(repo_of(q), one(q, "h"))
+
+
+def stash(q):
+    return gitshow.stash(repo_of(q), one(q, "name"))
+
+
+def changes(q):
+    return wipfiles.changes(repo_of(q))
+
+
+def diff(q):
+    return diffs.diff(repo_of(q), one(q, "src", ""), one(q, "path"), h=one(q, "h"), name=one(q, "name"),
+                      wt=one(q, "wt"), old=one(q, "old"))
+
+
+def file(q):
+    body, ctype = diffs.content(repo_of(q), one(q, "ref", ""), one(q, "path"))
+    return Raw(body, ctype) if ctype else body
+
+
+GET = {"/api/repos": repos, "/api/graph": graph, "/api/commit": commit, "/api/stash": stash,
+       "/api/changes": changes, "/api/diff": diff, "/api/file": file}
 POST = {"/api/fetch": fetch}
 
 

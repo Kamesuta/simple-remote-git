@@ -41,9 +41,11 @@ def github_url(remote: str | None) -> str | None:
     return f"https://github.com/{m[1]}/{m[2]}" if m else None
 
 
-def _git(repo: Path, *args: str, timeout: float = 15) -> subprocess.CompletedProcess:
+def _git(repo: Path, *args: str, timeout: float = 15, text: bool = True) -> subprocess.CompletedProcess:
+    """git を叩く。text=False はファイルの中身(画像など)をバイト列のまま受けたいとき。"""
     env = dict(os.environ, GIT_TERMINAL_PROMPT="0", LC_ALL="C")
-    return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True,
+    return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=text,
+                          encoding="utf-8" if text else None, errors="replace" if text else None,
                           timeout=timeout, env=env)
 
 
