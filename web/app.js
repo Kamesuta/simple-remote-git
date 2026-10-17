@@ -1,7 +1,7 @@
 // 画面の流れ:開く → 手元のログで即描画 → 裏でフェッチ → 終わったら取り直して描き直す。
 // PWA に戻ってきたとき(visibilitychange)も同じ流れ。最後に見たリポは localStorage に覚える。
-import { layout, render } from "./graph.js";
-import { ago, label, esc, rowHtml } from "./rows.js";
+import { layout, render } from "./graph/graph.js";
+import { ago, label, esc, rowHtml } from "./graph/rows.js";
 
 const ROW = 64;
 const LANE = 12;

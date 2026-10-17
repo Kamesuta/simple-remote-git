@@ -1,7 +1,7 @@
 // レーン割り付けの形を確かめる。行は上が新しい(git log --topo-order と同じ並び)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { layout } from "../web/graph.js";
+import { layout } from "../web/graph/graph.js";
 
 const C = (h, ...p) => ({ h, p });
 const cols = (lay) => lay.rows.map((r) => r.col);
