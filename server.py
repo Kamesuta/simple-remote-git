@@ -1,10 +1,7 @@
 """スマホで Git Graph を見るための小さな HTTP サーバー。
 
 127.0.0.1 だけで待ち、外へは tailscale serve で tailnet の中にだけ出す(serve.sh)。
-  GET  /api/repos            最近使ったリポ 6 個
-  GET  /api/graph?repo=名前  グラフ用のコミット列
-  POST /api/fetch?repo=名前  git fetch --all
-それ以外は web/ の静的ファイル。
+/api/* は api.py が振り分ける(一覧は api.GET / api.POST)。それ以外は web/ の静的ファイル。
 """
 import json
 import os
@@ -13,8 +10,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import api
 import gitdata
-import worktree
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("SRG_PORT", "7420"))
@@ -30,47 +27,31 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
-    def _json(self, code: int, body) -> None:
-        data = json.dumps(body, ensure_ascii=False).encode()
+    def _send(self, code: int, body) -> None:
+        if isinstance(body, api.Raw):
+            data, ctype = body.data, body.ctype
+        else:
+            data, ctype = json.dumps(body, ensure_ascii=False).encode(), "application/json; charset=utf-8"
         self.send_response(code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
 
-    def _repo(self, q: dict):
-        name = (q.get("repo") or [""])[0]
-        path = gitdata.resolve(name)
-        if path is None:
-            self._json(404, {"error": f"そのリポは一覧に無い: {name}"})
-        return path
+    def _api(self, method: str) -> bool:
+        u = urlparse(self.path)
+        if not u.path.startswith("/api/"):
+            return False
+        self._send(*api.handle(method, u.path, parse_qs(u.query)))
+        return True
 
     def do_GET(self):
-        u = urlparse(self.path)
-        q = parse_qs(u.query)
-        if u.path == "/api/repos":
-            return self._json(200, gitdata.list_repos())
-        if u.path == "/api/graph":
-            repo = self._repo(q)
-            if repo is None:
-                return
-            try:
-                limit = max(1, min(2000, int((q.get("limit") or ["400"])[0])))
-                return self._json(200, worktree.decorate(repo, gitdata.graph(repo, limit)))
-            except (ValueError, RuntimeError) as e:
-                return self._json(500, {"error": str(e)})
-        if u.path.startswith("/api/"):
-            return self._json(404, {"error": "無い API"})
-        return super().do_GET()
+        if not self._api("GET"):
+            super().do_GET()
 
     def do_POST(self):
-        u = urlparse(self.path)
-        if u.path != "/api/fetch":
-            return self._json(404, {"error": "無い API"})
-        repo = self._repo(parse_qs(u.query))
-        if repo is not None:
-            res = gitdata.fetch(repo)
-            self._json(200 if res["ok"] else 502, res)
+        if not self._api("POST"):
+            self._send(404, {"error": "無い API"})
 
     def log_message(self, fmt, *args):
         # 静的ファイルの行は多いだけなので API だけ出す

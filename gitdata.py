@@ -52,25 +52,34 @@ def _origin(repo: Path) -> str | None:
     return r.stdout.strip() if r.returncode == 0 else None
 
 
-def list_repos(root: Path = ROOT, n: int = RECENT) -> list[dict]:
-    """最近使ったリポ n 個。新しい順。"""
+def scan(root: Path | None = None) -> list[tuple[float, Path]]:
+    """root の下のリポを (最後に触った時刻, パス) で、新しい順に。git は叩かない(毎回の照合で使うため)。
+    root の既定は呼んだ時点の ROOT(テストで ROOT を差し替えられるように)。"""
+    root = root or ROOT
     found = []
     for d in root.iterdir():
         # games のようにリポを束ねるだけのフォルダは、1 階層だけ潜る
         for c in [d] if (d / ".git").exists() else (d.iterdir() if d.is_dir() else []):
             if (c / ".git").is_dir():  # .git がファイルの worktree そのものは本体と重なるので数えない
                 found.append((last_used(c / ".git"), c))
-    found.sort(key=lambda t: t[0], reverse=True)
+    return sorted(found, key=lambda t: t[0], reverse=True)
+
+
+def list_repos(root: Path | None = None, n: int = RECENT) -> list[dict]:
+    """最近使ったリポ n 個。新しい順。"""
+    root = root or ROOT
     # 潜ったものは「束ね/リポ」の名前になる。resolve は root / name のまま引ける
     return [{"name": d.relative_to(root).as_posix(), "lastUsed": int(t), "github": github_url(_origin(d))}
-            for t, d in found[:n]]
+            for t, d in scan(root)[:n]]
 
 
-def resolve(name: str, root: Path = ROOT) -> Path | None:
-    """外から来たリポ名を、いまの一覧にある名前と完全一致したときだけパスにする。"""
-    for r in list_repos(root):
-        if r["name"] == name:
-            return root / name
+def resolve(name: str, root: Path | None = None) -> Path | None:
+    """外から来たリポ名を、root の下にあるリポの名前と完全一致したときだけパスにする。
+    チップの 6 個に限らない(貼ったパスは古いリポを指すこともあるため)。"""
+    root = root or ROOT
+    for _, d in scan(root):
+        if d.relative_to(root).as_posix() == name:
+            return d
     return None
 
 

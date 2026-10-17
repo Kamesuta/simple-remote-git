@@ -1,47 +1,15 @@
 """gitdata / worktree を、一時フォルダに作った本物の git リポで確かめる。"""
-import os
-import subprocess
-import sys
-import tempfile
 import time
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from helpers import TmpCase, git, make_repo, touch
 import gitdata  # noqa: E402
 import worktree  # noqa: E402
 
-ENV = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
-           GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com", GIT_CONFIG_GLOBAL="/dev/null")
 
 
-def git(cwd, *args):
-    return subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True,
-                          text=True, env=ENV).stdout.strip()
-
-
-def make_repo(root: Path, name: str) -> Path:
-    d = root / name
-    d.mkdir(parents=True)
-    git(d, "init", "-q", "-b", "main")
-    (d / "a.txt").write_text("1")
-    git(d, "add", ".")
-    git(d, "commit", "-qm", "first")
-    return d
-
-
-def touch(p: Path, t: float):
-    os.utime(p, (t, t))
-
-
-class ListRepos(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
-
-    def tearDown(self):
-        self.tmp.cleanup()
-
+class ListRepos(TmpCase):
     def test_order_by_last_use_and_worktree_counts(self):
         old, mid = make_repo(self.root, "old"), make_repo(self.root, "mid")
         (self.root / "not-a-repo").mkdir()
@@ -100,16 +68,12 @@ class Parse(unittest.TestCase):
                          [("stash@{0}", ["a"], "dev", "handoff"), ("stash@{1}", ["c"], "main", "件名: あり")])
 
 
-class Decorate(unittest.TestCase):
+class Decorate(TmpCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        super().setUp()
         self.repo = make_repo(self.root, "r")
         (self.repo / "a.txt").write_text("2")
         git(self.repo, "commit", "-qam", "second")
-
-    def tearDown(self):
-        self.tmp.cleanup()
 
     def graph(self):
         return worktree.decorate(self.repo, gitdata.graph(self.repo))["commits"]
