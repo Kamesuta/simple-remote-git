@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="views.css">
+<link rel="stylesheet" href="tabs.css">
 </head>
 <body>
 <header class="top">
@@ -58,6 +59,11 @@
   <div class="lanes"><svg id="lanes" aria-hidden="true"></svg></div>
   <div id="rows"></div>
 </main>
+<main id="changes" class="changes" hidden></main>
+<nav class="tabs" aria-label="タブ">
+  <button type="button" data-tab="graph" aria-pressed="true">グラフ</button>
+  <button type="button" data-tab="changes" aria-pressed="false">変更<span id="wip-n" class="tab-n" hidden></span></button>
+</nav>
 <div id="layer"></div>
 <script type="module" src="app.js"></script>
 </body>

@@ -12,6 +12,8 @@ let current = null; // いま描いているリポ名
 let data = null; // いま描いているグラフ(詳細のシートがチップと未プッシュを借りる)
 let seq = 0; // リポを切り替えたら古い応答を捨てるための番号
 let fetchState = { state: "idle", text: "" };
+let loaded = () => {}; // 描き終えたら呼ぶ(下のタブの数を直すため)
+export const onLoad = (fn) => { loaded = fn; };
 
 // ---- 状態の行 ----
 function showStatus(state, text) {
@@ -47,6 +49,7 @@ async function loadGraph(my) {
   if (my !== seq) return null;
   data = d;
   draw(d);
+  loaded(d);
   return d;
 }
 
@@ -83,5 +86,8 @@ export function open(repo) {
 }
 
 export const github = () => data?.github ?? null;
+// 未コミットのファイルのおおよその数(ステージ済みと未ステージの両方にあるファイルは 2 つに数える)
+export const wipTotal = () => (data?.commits ?? []).filter((c) => c.kind === "wip")
+  .reduce((n, c) => n + c.staged + c.modified + c.untracked, 0);
 export const rowAt = (i) => data?.commits[i];
 export const findCommit = (h) => data?.commits.find((c) => c.h === h);

@@ -4,8 +4,9 @@
 import * as graph from "./graph/view.js";
 import { esc, label } from "./graph/rows.js";
 import { api } from "./lib/api.js";
-import { build, parent, parse } from "./lib/route.js";
+import { build, parent, parse, tabOf } from "./lib/route.js";
 import { setupTheme } from "./lib/theme.js";
+import * as changes from "./views/changes.js";
 import { diffPage } from "./views/diff.js";
 import { sheet } from "./views/sheet.js";
 
@@ -55,6 +56,11 @@ function show() {
   store.set(r.repo);
   header(r.repo);
   graph.open(r.repo);
+  const tab = tabOf(r);
+  $("graph").hidden = tab !== "graph";
+  $("changes").hidden = tab !== "changes";
+  for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
+  if (r.view === "changes" || (tab === "changes" && $("changes").childElementCount === 0)) changes.show(r, ctx);
   const key = r.view === "commit" || r.view === "stash" || r.view === "diff" ? build(r) : null;
   if (key === layerKey) return;
   layerKey = key;
@@ -75,6 +81,15 @@ $("rows").addEventListener("click", (e) => {
   else if (c.kind === "stash") go({ repo, view: "stash", name: c.h });
   else go({ repo, view: "changes", wt: c.wt });
 });
+document.querySelector(".tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-tab]");
+  if (b) go({ repo: route().repo, view: b.dataset.tab }, { replace: true });
+});
+graph.onLoad(() => {
+  const n = graph.wipTotal();
+  $("wip-n").hidden = !n;
+  $("wip-n").textContent = n;
+});
 $("repos").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (b && b.dataset.name !== route().repo) go({ repo: b.dataset.name, view: "graph" });
@@ -82,7 +97,11 @@ $("repos").addEventListener("click", (e) => {
 window.addEventListener("popstate", (e) => { depth = e.state?.d ?? 0; show(); });
 $("refresh").addEventListener("click", graph.refresh);
 $("retry").addEventListener("click", graph.refresh);
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") graph.refresh(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  graph.refresh();
+  if (route().view === "changes") changes.show(route(), ctx); // 戻ってきたら未コミットも取り直す
+});
 setInterval(graph.showFetched, 30000); // 「n 分前」を進める
 setupTheme();
 

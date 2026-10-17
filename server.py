@@ -64,8 +64,15 @@ Handler.extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
                           ".webmanifest": "application/manifest+json", ".js": "text/javascript",
                           ".mjs": "text/javascript", ".svg": "image/svg+xml"}
 
+
+class Server(ThreadingHTTPServer):
+    # 開いた瞬間に JS のモジュールと API がまとめて来る。既定の待ち行列 5 本ではあふれて接続を切られるため広げる
+    request_queue_size = 128
+    daemon_threads = True
+
+
 if __name__ == "__main__":
-    srv = ThreadingHTTPServer((HOST, PORT), Handler)
+    srv = Server((HOST, PORT), Handler)
     print(f"http://{HOST}:{PORT}/  (root: {gitdata.ROOT})", flush=True)
     try:
         srv.serve_forever()
