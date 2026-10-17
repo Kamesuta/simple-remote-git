@@ -68,13 +68,21 @@ def diff(q):
                       wt=one(q, "wt"), old=one(q, "old"))
 
 
+def log(q):
+    try:
+        n = int(one(q, "n", "1"))
+    except ValueError:
+        raise safe.Bad("n は数で")
+    return gitshow.log(repo_of(q), one(q, "ref", ""), one(q, "path"), n)
+
+
 def file(q):
     body, ctype = diffs.content(repo_of(q), one(q, "ref", ""), one(q, "path"))
     return Raw(body, ctype) if ctype else body
 
 
 GET = {"/api/repos": repos, "/api/graph": graph, "/api/commit": commit, "/api/stash": stash,
-       "/api/changes": changes, "/api/diff": diff, "/api/file": file}
+       "/api/changes": changes, "/api/diff": diff, "/api/file": file, "/api/log": log}
 POST = {"/api/fetch": fetch}
 
 

@@ -1,6 +1,7 @@
 """1 ファイルの差分と中身(diffs)を確かめる。"""
 from helpers import TmpCase, git, make_repo
 import diffs  # noqa: E402
+import gitshow  # noqa: E402
 import safe  # noqa: E402
 
 
@@ -42,6 +43,17 @@ class Diffs(TmpCase):
         d = diffs.cap("\n".join(str(i) for i in range(diffs.MAX_LINES + 10)))
         self.assertTrue(d["truncated"])
         self.assertEqual(len(d["text"].split("\n")), diffs.MAX_LINES)
+
+
+class Log(TmpCase):
+    def test_last_commit_of_file(self):
+        repo = make_repo(self.root, "r")
+        (repo / "b.txt").write_text("b")
+        git(repo, "add", ".")
+        git(repo, "commit", "-qm", "b を足す")
+        h = git(repo, "rev-parse", "HEAD")
+        self.assertEqual([c["s"] for c in gitshow.log(repo, h, "a.txt", 5)], ["first"])
+        self.assertEqual(gitshow.log(repo, "wt:作業ツリー", "b.txt")[0]["h"], h)
 
 
 class Content(TmpCase):

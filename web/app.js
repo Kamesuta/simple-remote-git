@@ -1,149 +1,108 @@
-// 画面の流れ:開く → 手元のログで即描画 → 裏でフェッチ → 終わったら取り直して描き直す。
-// PWA に戻ってきたとき(visibilitychange)も同じ流れ。最後に見たリポは localStorage に覚える。
-import { layout, render } from "./graph/graph.js";
-import { ago, label, esc, rowHtml } from "./graph/rows.js";
+// 起動と # の振り分け。グラフ(のちに変更のタブも)の上に、詳細のシートと差分の画面を重ねる。
+// アプリの中の移動は pushState で積み、「戻る」はそれを 1 つ戻す。積んだものが無い
+// (ホーム画面から開き直した・貼ったリンクから来た)ときは、親の画面へ置き換える。
+import * as graph from "./graph/view.js";
+import { esc, label } from "./graph/rows.js";
+import { api } from "./lib/api.js";
+import { build, parent, parse } from "./lib/route.js";
+import { setupTheme } from "./lib/theme.js";
+import { diffPage } from "./views/diff.js";
+import { sheet } from "./views/sheet.js";
 
-const ROW = 64;
-const LANE = 12;
 const $ = (id) => document.getElementById(id);
-
 let repos = [];
-let current = null; // いま見ているリポ名
-let seq = 0; // リポを切り替えたら古い応答を捨てるための番号
-let fetchedAt = null;
-let fetchState = { state: "idle", text: "" };
+let depth = 0; // アプリの中で積んだ履歴の数
+let layerKey = null; // いま重ねている画面の #(同じなら作り直さない)
 
 const store = {
   get: () => { try { return localStorage.getItem("repo"); } catch { return null; } },
   set: (v) => { try { localStorage.setItem("repo", v); } catch { /* 覚えられなくても動く */ } },
 };
 
-// ---- 状態の行 ----
-function showStatus(state, text) {
-  fetchState = { state, text };
-  $("status").dataset.state = state;
-  $("status-text").textContent = text;
-}
-function showFetched() {
-  if (fetchState.state === "busy" || fetchState.state === "err") return;
-  const when = fetchedAt && ago(fetchedAt);
-  showStatus("done", !when ? "まだ取得していない" : when === "たった今" ? "たった今取得" : `${when}に取得`);
+function route() {
+  const r = parse(location.hash);
+  if (!r.repo) r.repo = repos.some((x) => x.name === store.get()) ? store.get() : repos[0]?.name;
+  return r;
 }
 
-function draw(data) {
-  const commits = data.commits;
-  const lay = layout(commits);
-  const heads = new Set(commits.flatMap((c, i) => (c.refs?.some((r) => r.t === "head") ? [i] : [])));
-  const g = render(lay, { lane: LANE, row: ROW, heads });
-  // グラフ列は画面幅の 40% で切る(それより広い分は隠れる)
-  const pad = Math.max(24, Math.min(g.width, Math.floor(window.innerWidth * 0.4)));
-  const svg = $("lanes");
-  svg.setAttribute("width", g.width);
-  svg.setAttribute("height", g.height);
-  svg.innerHTML = g.markup;
-  svg.parentElement.style.width = `${pad}px`;
-  $("rows").innerHTML = commits.length
-    ? commits.map((c) => rowHtml(c, pad, data.github)).join("")
-    : '<p class="empty">コミットがまだありません</p>';
-  const n = commits.filter((c) => c.kind === "commit").length;
-  $("count").textContent = `${n} 件`;
+export function go(r, { replace = false } = {}) {
+  if (replace) history.replaceState({ d: depth }, "", build(r));
+  else history.pushState({ d: ++depth }, "", build(r));
+  show();
 }
 
-// ---- データの流れ ----
-async function api(path, opts) {
-  const res = await fetch(path, opts);
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok && !("ok" in body)) throw new Error(body.error || `HTTP ${res.status}`);
-  return body;
+function back() {
+  if (depth > 0) history.back();
+  else go(parent(route()), { replace: true });
 }
 
-async function loadGraph(my) {
-  const data = await api(`/api/graph?repo=${encodeURIComponent(current)}&limit=400`);
-  if (my !== seq) return null;
-  fetchedAt = data.fetchedAt;
-  draw(data);
-  return data;
-}
+const ctx = { go, back, github: graph.github, findCommit: graph.findCommit };
 
-async function refresh() {
-  if (!current) return;
-  const my = ++seq;
-  try {
-    const data = await loadGraph(my);
-    if (!data) return;
-    if (!data.remotes.length) return showStatus("done", "フェッチ先なし(remote がありません)");
-    showStatus("busy", "取得中…");
-    const res = await api(`/api/fetch?repo=${encodeURIComponent(current)}`, { method: "POST" });
-    if (my !== seq) return;
-    if (!res.ok) return showStatus("err", `取得できず: ${res.error}`);
-    fetchState = { state: "idle" };
-    await loadGraph(my);
-    showFetched();
-  } catch (e) {
-    if (my === seq) showStatus("err", `読めませんでした: ${e.message}`);
-  }
-}
-
-function select(name) {
-  current = name;
-  store.set(name);
-  const r = repos.find((x) => x.name === name);
+function header(repo) {
+  const r = repos.find((x) => x.name === repo) ?? { name: repo };
   $("repo-label").textContent = label(r);
-  $("repo-path").textContent = `~/softdata/git/${r.name}`;
+  $("repo-path").textContent = `~/softdata/git/${repo}`;
   document.title = `${label(r)} — Git Graph`;
   for (const b of $("repos").children) {
-    b.setAttribute("aria-pressed", String(b.dataset.name === name));
-    if (b.dataset.name === name) b.scrollIntoView({ block: "nearest", inline: "nearest" });
+    b.setAttribute("aria-pressed", String(b.dataset.name === repo));
+    if (b.dataset.name === repo) b.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
-  window.scrollTo(0, 0);
-  $("rows").innerHTML = "";
-  $("lanes").innerHTML = "";
-  showStatus("busy", "読み込み中…");
-  refresh();
 }
+
+function show() {
+  const r = route();
+  if (!r.repo) return;
+  store.set(r.repo);
+  header(r.repo);
+  graph.open(r.repo);
+  const key = r.view === "commit" || r.view === "stash" || r.view === "diff" ? build(r) : null;
+  if (key === layerKey) return;
+  layerKey = key;
+  const layer = $("layer");
+  layer.replaceChildren();
+  if (r.view === "commit" || r.view === "stash") layer.append(sheet(r, ctx));
+  else if (r.view === "diff") layer.append(diffPage(r, ctx));
+  // 重ねた画面だけをスクロールさせ、下のグラフは位置を保ったまま止めておく
+  document.body.classList.toggle("locked", !!key);
+}
+
+$("rows").addEventListener("click", (e) => {
+  const b = e.target.closest(".row[data-i]");
+  const c = b && graph.rowAt(+b.dataset.i);
+  if (!c) return;
+  const repo = route().repo;
+  if (c.kind === "commit") go({ repo, view: "commit", h: c.h });
+  else if (c.kind === "stash") go({ repo, view: "stash", name: c.h });
+  else go({ repo, view: "changes", wt: c.wt });
+});
+$("repos").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b && b.dataset.name !== route().repo) go({ repo: b.dataset.name, view: "graph" });
+});
+window.addEventListener("popstate", (e) => { depth = e.state?.d ?? 0; show(); });
+$("refresh").addEventListener("click", graph.refresh);
+$("retry").addEventListener("click", graph.refresh);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") graph.refresh(); });
+setInterval(graph.showFetched, 30000); // 「n 分前」を進める
+setupTheme();
 
 async function start() {
   try {
     repos = await api("/api/repos");
   } catch (e) {
-    return showStatus("err", `一覧を読めませんでした: ${e.message}`);
+    $("status").dataset.state = "err";
+    $("status-text").textContent = `一覧を読めませんでした: ${e.message}`;
+    return;
   }
   $("repos").innerHTML = repos.map((r) =>
     `<button type="button" data-name="${esc(r.name)}" aria-pressed="false">${esc(label(r))}</button>`).join("");
-  if (!repos.length) return showStatus("err", "~/softdata/git に git リポが見つかりません");
-  const last = store.get();
-  select(repos.some((r) => r.name === last) ? last : repos[0].name);
+  if (!repos.length && !location.hash) {
+    $("status-text").textContent = "~/softdata/git に git リポが見つかりません";
+    return;
+  }
+  history.replaceState({ d: 0 }, "", build(route()));
+  show();
 }
-
-$("repos").addEventListener("click", (e) => {
-  const b = e.target.closest("button");
-  if (b && b.dataset.name !== current) select(b.dataset.name);
-});
-// ---- テーマ(自動 → ライト → ダーク)。最初の判定は index.html の頭でしてある ----
-const THEMES = { auto: "自動", light: "ライト", dark: "ダーク" };
-const NEXT = { auto: "light", light: "dark", dark: "auto" };
-const darkMq = matchMedia("(prefers-color-scheme: dark)");
-function applyTheme(pick) {
-  const dark = pick === "dark" || (pick === "auto" && darkMq.matches);
-  const root = document.documentElement;
-  root.dataset.theme = dark ? "dark" : "light";
-  root.dataset.pick = pick;
-  $("theme-color").content = dark ? "#16191D" : "#FFFFFF";
-  $("theme-label").textContent = THEMES[pick];
-  $("theme").setAttribute("aria-label", `テーマ: ${THEMES[pick]}(押すと切り替え)`);
-}
-$("theme").addEventListener("click", () => {
-  const pick = NEXT[document.documentElement.dataset.pick] ?? "auto";
-  try { localStorage.setItem("theme", pick); } catch { /* 覚えられなくても今は切り替わる */ }
-  applyTheme(pick);
-});
-darkMq.addEventListener("change", () => applyTheme(document.documentElement.dataset.pick));
-applyTheme(document.documentElement.dataset.pick ?? "auto");
-
-$("refresh").addEventListener("click", refresh);
-$("retry").addEventListener("click", refresh);
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
-setInterval(showFetched, 30000); // 「n 分前」を進める
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 start();

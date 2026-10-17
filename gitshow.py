@@ -7,10 +7,10 @@
 from pathlib import Path
 
 import safe
-from gitdata import _git, github_url, _origin
+from gitdata import _git, _origin, github_url, parse_refs
 
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"  # 根のコミットや untracked を「空から」比べる相手
-_META = "%H%x1f%P%x1f%an%x1f%at%x1f%s%x1f%b"
+_META = "%H%x1f%P%x1f%an%x1f%at%x1f%D%x1f%s%x1f%b"
 
 
 def parse_name_status(z: str) -> list[dict]:
@@ -65,8 +65,10 @@ def _meta(repo: Path, rev: str) -> dict:
     r = _git(repo, "show", "-s", f"--format={_META}", rev, "--")
     if r.returncode != 0:
         raise safe.NotFound(f"そのコミットは無い: {rev}")
-    h, p, an, at, s, body = r.stdout.rstrip("\n").split("\x1f", 5)
-    return {"h": h, "p": p.split(), "an": an, "at": int(at), "s": s, "body": body.strip()}
+    h, p, an, at, deco, s, body = r.stdout.rstrip("\n").split("\x1f", 6)
+    # リンクから直接開くとグラフがまだ無いので、チップの元(%D)もここで返す
+    remotes = set(_git(repo, "remote").stdout.split())
+    return {"h": h, "p": p.split(), "an": an, "at": int(at), "refs": parse_refs(deco, remotes), "s": s, "body": body.strip()}
 
 
 def pushed(repo: Path, h: str) -> bool:
@@ -91,3 +93,18 @@ def stash(repo: Path, name: str) -> dict:
     if len(m["p"]) > 2:
         m["files"] += [dict(f, untracked=True) for f in file_list(repo, EMPTY_TREE, m["p"][2])]
     return m
+
+
+def log(repo: Path, ref: str, path: str, n: int = 1) -> list[dict]:
+    """そのファイルを変えたコミット(新しい順)。ref は SHA か `wt:<名>`(そのワークツリーの HEAD から)。"""
+    path = safe.rel_path(path)
+    if ref.startswith("wt:"):
+        cwd, rev = safe.worktree_path(repo, ref[3:]), "HEAD"
+    else:
+        cwd, rev = repo, safe.sha(ref)
+    r = _git(cwd, "log", f"-n{max(1, min(200, n))}", "--format=%H%x1f%an%x1f%at%x1f%s", rev, "--", path)
+    out = []
+    for line in r.stdout.splitlines():
+        h, an, at, s = line.split("\x1f", 3)
+        out.append({"h": h, "an": an, "at": int(at), "s": s})
+    return out

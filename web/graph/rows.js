@@ -27,7 +27,7 @@ const RANK = { head: 0, wt: 1, local: 2, remote: 3, tag: 4 };
 const track = (c) => (c.ahead ? `<b class="ahead">↑${c.ahead}</b>` : "") + (c.behind ? `<b class="behind">↓${c.behind}</b>` : "");
 
 // local と同名の origin が同じコミットにあれば 1 枚にまとめて雲の印。ワークツリーを先に並べる
-function chips(refs) {
+export function chips(refs) {
   const mine = new Set(refs.filter((r) => r.t === "local" || r.t === "head").map((r) => r.n));
   const out = [];
   for (const r of refs) {
@@ -60,22 +60,18 @@ function wipCounts(c) {
   return parts.join(" · ");
 }
 
-export function rowHtml(c, pad, github) {
-  const style = `style="padding-left:${pad}px"`;
+// 行はボタン。タップで詳細・変更のタブを開く(GitHub へは詳細の中から行く)。i はグラフの何行目か
+export function rowHtml(c, pad, i) {
+  const attr = `type="button" data-i="${i}" style="padding-left:${pad}px"`;
   if (c.kind === "wip") {
-    return `<div class="row wip" ${style}><div class="txt"><div class="subj">未コミットの変更</div>
-      <div class="meta"><span class="chip wt">${ICON.folder}<span>${esc(c.wt)}</span></span><span class="who">${wipCounts(c)}</span></div></div></div>`;
+    return `<button class="row wip" ${attr}><div class="txt"><div class="subj">未コミットの変更</div>
+      <div class="meta"><span class="chip wt">${ICON.folder}<span>${esc(c.wt)}</span></span><span class="who">${wipCounts(c)}</span></div></div></button>`;
   }
   if (c.kind === "stash") {
-    return `<div class="row stash" ${style}><div class="txt"><div class="subj">${esc(c.s)}</div>
-      <div class="meta"><span class="chip stash">${ICON.box}<span>${esc(c.name)}</span></span><span class="who">${esc(c.on)}</span><span class="end">${ago(c.at)}</span></div></div></div>`;
+    return `<button class="row stash" ${attr}><div class="txt"><div class="subj">${esc(c.s)}</div>
+      <div class="meta"><span class="chip stash">${ICON.box}<span>${esc(c.name)}</span></span><span class="who">${esc(c.on)}</span><span class="end">${ago(c.at)}</span></div></div></button>`;
   }
   const head = c.refs.some((r) => r.t === "head");
-  const inner = `<div class="txt"><div class="subj">${esc(c.s)}</div>
-    <div class="meta">${chips(c.refs)}${c.pushed === false ? '<span class="unpushed">未プッシュ</span>' : ""}<span class="who">${esc(c.an)} · ${ago(c.at)}</span><span class="end sha">${c.h.slice(0, 7)}</span></div></div>`;
-  const cls = `row${head ? " head" : ""}`;
-  // GitHub が無いリポ(origin 無し)は開く先が無いので、リンクにしない
-  return github
-    ? `<a class="${cls}" ${style} href="${esc(github)}/commit/${c.h}" target="_blank" rel="noopener">${inner}</a>`
-    : `<div class="${cls}" ${style}>${inner}</div>`;
+  return `<button class="row${head ? " head" : ""}" ${attr}><div class="txt"><div class="subj">${esc(c.s)}</div>
+    <div class="meta">${chips(c.refs)}${c.pushed === false ? '<span class="unpushed">未プッシュ</span>' : ""}<span class="who">${esc(c.an)} · ${ago(c.at)}</span><span class="end sha">${c.h.slice(0, 7)}</span></div></div></button>`;
 }

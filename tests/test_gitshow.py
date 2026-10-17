@@ -43,6 +43,7 @@ class Show(TmpCase):
         c = gitshow.commit(self.repo, git(self.repo, "rev-parse", "HEAD"))
         self.assertEqual((c["files"][0]["status"], c["files"][0]["old"]), ("R", "a.txt"))
         self.assertEqual(c["body"], "本文の 1 行目")
+        self.assertEqual(c["refs"], [{"t": "head", "n": "main"}])
         git(self.repo, "checkout", "-qb", "side", "HEAD~1")
         (self.repo / "s.txt").write_text("s\n")
         git(self.repo, "add", ".")

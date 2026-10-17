@@ -1,0 +1,125 @@
+/* 重ねる画面(詳細のシート・差分の画面)と、変更のタブの見た目。土台の色は style.css の変数を使う */
+:root {
+  --ok: #15803D; --ok-bg: #E7F6EC; --add-bg: #EAF7EE; --add-strong: #BFE8CB; --del-bg: #FCEDEC; --del-strong: #F6C5C0;
+  --hunk-bg: #F1F1EC; --accent-bg: #E8EEFC; --warn-bg: #FEF3E2; --line-strong: #D5D6D1; --shade: rgba(23, 25, 28, .38);
+}
+:root[data-theme="dark"] {
+  --ok: #5EE38B; --ok-bg: #12291F; --add-bg: #10241A; --add-strong: #1F4D33; --del-bg: #2A1614; --del-strong: #5A2A25;
+  --hunk-bg: #1B1F24; --accent-bg: #1A2540; --warn-bg: #2E2410; --line-strong: #343A42; --shade: rgba(0, 0, 0, .55);
+}
+body.locked { overflow: hidden; }
+[hidden] { display: none !important; } /* display を付けた部品でも hidden で隠れるように */
+i { font-style: normal; }
+.n-add { color: var(--ok); } .n-del { color: var(--err); } .muted { color: var(--muted); }
+.note { margin: 0; padding: 16px; color: var(--muted); font-size: 13px; line-height: 20px; font-family: 'IBM Plex Sans JP', system-ui, sans-serif; }
+.note.err { color: var(--err); }
+
+/* ---- 詳細のシート ---- */
+.sheet-wrap { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end; }
+.backdrop { position: absolute; inset: 0; background: var(--shade); animation: fade .2s; }
+.sheet {
+  position: relative; max-height: 88vh; overflow-y: auto; background: var(--surface); border-radius: 18px 18px 0 0;
+  padding: 6px 16px calc(20px + env(safe-area-inset-bottom)); animation: up .24s cubic-bezier(.2, .8, .2, 1);
+}
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 4px auto 12px; }
+.subject { margin: 0 0 6px; font-size: 17px; line-height: 24px; font-weight: 600; overflow-wrap: anywhere; }
+.sheet .body { margin: 0 0 8px; white-space: pre-wrap; font-size: 13px; line-height: 20px; color: var(--muted); overflow-wrap: anywhere; }
+.meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; font-size: 12px; color: var(--muted); }
+.sha-btn {
+  flex-shrink: 0; border: 1px solid var(--line-strong); border-radius: 6px; padding: 3px 8px; background: none; color: var(--ink);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px;
+}
+.chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.chips-row .chip { max-width: 100%; }
+.chip.unpushed-chip { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); font-weight: 600; flex-shrink: 0; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  flex: 1 1 auto; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0 14px;
+  border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 14px; text-decoration: none;
+}
+.btn:active { background: var(--line); }
+.btn.off { color: var(--muted); border-style: dashed; }
+.why { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.files-head { display: flex; justify-content: space-between; margin: 16px 0 2px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 14px; }
+.files-head span { font-size: 12px; }
+
+/* ファイルの行(詳細と変更のタブで同じ) */
+.frow {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 6px 0; border: 0;
+  border-bottom: 1px solid var(--line); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.frow:active { background: var(--line); }
+.badge {
+  flex: none; display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid; border-radius: 5px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600;
+}
+.badge.add { color: var(--ok); background: var(--ok-bg); }
+.badge.mod { color: var(--warn); background: var(--warn-bg); }
+.badge.del { color: var(--err); background: var(--err-bg); }
+.badge.ren { color: var(--accent); background: var(--accent-bg); }
+.fname { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fname b, .fname small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fname b { font-size: 14px; font-weight: 600; }
+.fname small { font-size: 11px; color: var(--muted); }
+.nums { flex: none; font-size: 12px; }
+
+/* ---- 差分の画面 ---- */
+.page {
+  position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--surface);
+  padding-top: env(safe-area-inset-top); animation: slide .18s ease-out;
+}
+.page-top { display: flex; align-items: center; gap: 4px; padding: 8px 14px 4px 2px; }
+.back { flex: none; width: 40px; height: 40px; border: 0; background: none; color: var(--accent); font-size: 30px; line-height: 1; }
+.page-top .names { flex: 1; min-width: 0; }
+.page-top h2 { margin: 0; font-size: 17px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.page-top .sub { margin: 0; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pos { flex: none; font-size: 12px; color: var(--muted); }
+.tools { display: flex; align-items: center; gap: 8px; padding: 6px 14px 10px; border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; padding: 2px; border: 1px solid var(--line-strong); border-radius: 999px; }
+.seg button, .wrap { border: 0; border-radius: 999px; padding: 5px 14px; background: none; color: var(--ink); font: inherit; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; box-shadow: inset 0 0 0 1px var(--accent); }
+.wrap { border: 1px solid var(--line-strong); color: var(--muted); }
+.wrap[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
+.counts { margin-left: auto; font-size: 12px; white-space: nowrap; }
+.page-body {
+  flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding-bottom: 72px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; line-height: 20px;
+}
+.dl, .fl { display: flex; align-items: flex-start; min-width: max-content; }
+.wrapped .dl, .wrapped .fl { min-width: 0; }
+.ln {
+  flex: none; width: 38px; padding: 0 6px 0 0; border: 0; background: none; color: var(--muted); text-align: right;
+  font: inherit; font-size: 11px; user-select: none;
+}
+.sg { flex: none; width: 14px; text-align: center; }
+.code { white-space: pre; padding-right: 14px; }
+.wrapped .code { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dl.add { background: var(--add-bg); } .dl.add .sg { color: var(--ok); }
+.dl.del { background: var(--del-bg); } .dl.del .sg { color: var(--err); }
+.dl.add b { background: var(--add-strong); font-weight: 600; border-radius: 2px; }
+.dl.del b { background: var(--del-strong); font-weight: 600; border-radius: 2px; }
+.nonl { margin-left: 6px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 10px; }
+.hunk { padding: 4px 14px; background: var(--hunk-bg); color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fold { padding: 6px; background: var(--hunk-bg); color: var(--muted); text-align: center; font-family: 'IBM Plex Sans JP', system-ui, sans-serif; font-size: 12px; }
+.fl.sel { background: var(--accent-bg); }
+.fl.sel .ln { color: var(--accent); font-weight: 600; }
+.img { display: block; max-width: calc(100% - 32px); margin: 16px auto; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0 / 16px 16px; }
+.page-nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line);
+  padding: 8px 14px calc(8px + env(safe-area-inset-bottom)); background: var(--surface);
+}
+.page-nav button { max-width: 38%; border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.page-nav .hint { flex: 1; min-width: 0; font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.linebar {
+  position: absolute; left: 12px; right: 12px; bottom: calc(64px + env(safe-area-inset-bottom)); display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: var(--surface);
+  font-size: 13px; box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+}
+.page:has(.page-nav[hidden]) .linebar { bottom: calc(16px + env(safe-area-inset-bottom)); }
+.linebar a { color: inherit; font-weight: 600; }
+.linebar button { flex: none; border: 0; border-radius: 8px; padding: 6px 10px; background: rgba(127, 127, 127, .3); color: inherit; font: inherit; font-size: 12px; }
+
+@keyframes up { from { transform: translateY(100%); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes slide { from { transform: translateX(24px); opacity: 0; } }
