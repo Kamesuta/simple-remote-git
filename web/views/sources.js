@@ -55,7 +55,8 @@ async function openSource(r) {
     if (last) diff = { src: "commit", h: last.h, path: r.path, note: `最後に変えたコミット ${short(last.h)}: ${last.s}` };
   }
   return {
-    title: r.ref.startsWith("wt:") ? r.ref.slice(3) : short(r.ref), sub: "貼ったパス", files: [f],
+    // 別のリポのこともあるので、見出しにはリポの名前も出す
+    title: `${r.repo} · ${r.ref.startsWith("wt:") ? r.ref.slice(3) : short(r.ref)}`, sub: "貼ったパス", files: [f],
     route: () => r, ref: () => r.ref, diff: () => diff,
   };
 }

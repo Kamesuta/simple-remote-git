@@ -8,6 +8,7 @@
 //   #/<repo>/s/<n>                   スタッシュの詳細    …/f/<path> でその差分
 //   #/<repo>/w/<wt>/<part>/<path>    未コミットの差分(part は staged / unstaged / untracked)
 //   #/<repo>/open/<ref>/<path>       パスを貼って開いたファイル(ref は SHA か wt:<名>)
+//   #/<repo>/find                    探す欄
 //   ?v=file で差分でなくファイル、?line=42 でその行、?old= は名前変更の元の名前
 const enc = encodeURIComponent;
 const QUERY = ["v", "line", "old", "wt"];
@@ -21,6 +22,7 @@ export function parse(hash) {
   for (const k of QUERY) if (params.has(k)) r[k] = params.get(k);
   const [kind, a, b, c] = seg.slice(1);
   if (kind === "changes") r.view = "changes";
+  else if (kind === "find") r.view = "search";
   else if (kind === "c" && a) Object.assign(r, b === "f" && c ? { view: "diff", src: "commit", h: a, path: c } : { view: "commit", h: a });
   else if (kind === "s" && a) {
     const name = `stash@{${a}}`;
@@ -34,6 +36,7 @@ export function build(r) {
   let s = `#/${enc(r.repo)}`;
   const stashN = () => r.name.slice(7, -1); // stash@{3} → 3
   if (r.view === "changes") s += "/changes";
+  else if (r.view === "search") s += "/find";
   else if (r.view === "commit") s += `/c/${r.h}`;
   else if (r.view === "stash") s += `/s/${stashN()}`;
   else if (r.view === "diff") {

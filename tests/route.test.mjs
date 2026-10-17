@@ -14,6 +14,7 @@ test("# は往復しても同じ状態に戻る(/ を含むリポ名とパスも
     { repo: "r", view: "diff", src: "stash", name: "stash@{0}", path: "a.txt" },
     { repo: "r", view: "diff", src: "unstaged", wt: "作業ツリー", path: "docs/README.md" },
     { repo: "r", view: "diff", src: "open", ref: "wt:feat-x", path: "a/b.py", line: "42", v: "file" },
+    { repo: "r", view: "search" },
   ];
   for (const r of cases) assert.deepEqual(parse(build(r)), r);
 });

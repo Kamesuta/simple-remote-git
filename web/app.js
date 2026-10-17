@@ -8,6 +8,7 @@ import { build, parent, parse, tabOf } from "./lib/route.js";
 import { setupTheme } from "./lib/theme.js";
 import * as changes from "./views/changes.js";
 import { diffPage } from "./views/diff.js";
+import { searchPage } from "./views/search.js";
 import { sheet } from "./views/sheet.js";
 
 const $ = (id) => document.getElementById(id);
@@ -61,13 +62,14 @@ function show() {
   $("changes").hidden = tab !== "changes";
   for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
   if (r.view === "changes" || (tab === "changes" && $("changes").childElementCount === 0)) changes.show(r, ctx);
-  const key = r.view === "commit" || r.view === "stash" || r.view === "diff" ? build(r) : null;
+  const key = ["commit", "stash", "diff", "search"].includes(r.view) ? build(r) : null;
   if (key === layerKey) return;
   layerKey = key;
   const layer = $("layer");
   layer.replaceChildren();
   if (r.view === "commit" || r.view === "stash") layer.append(sheet(r, ctx));
   else if (r.view === "diff") layer.append(diffPage(r, ctx));
+  else if (r.view === "search") layer.append(searchPage(r, ctx));
   // 重ねた画面だけをスクロールさせ、下のグラフは位置を保ったまま止めておく
   document.body.classList.toggle("locked", !!key);
 }
@@ -95,6 +97,7 @@ $("repos").addEventListener("click", (e) => {
   if (b && b.dataset.name !== route().repo) go({ repo: b.dataset.name, view: "graph" });
 });
 window.addEventListener("popstate", (e) => { depth = e.state?.d ?? 0; show(); });
+$("search").addEventListener("click", () => go({ repo: route().repo, view: "search" }));
 $("refresh").addEventListener("click", graph.refresh);
 $("retry").addEventListener("click", graph.refresh);
 document.addEventListener("visibilitychange", () => {

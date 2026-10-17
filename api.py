@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import diffs
 import gitdata
 import gitshow
+import pathres
 import pushstate
 import safe
 import wipfiles
@@ -76,13 +77,18 @@ def log(q):
     return gitshow.log(repo_of(q), one(q, "ref", ""), one(q, "path"), n)
 
 
+def resolve(q):
+    return pathres.resolve(one(q, "path", ""), one(q, "repo"))
+
+
 def file(q):
     body, ctype = diffs.content(repo_of(q), one(q, "ref", ""), one(q, "path"))
     return Raw(body, ctype) if ctype else body
 
 
 GET = {"/api/repos": repos, "/api/graph": graph, "/api/commit": commit, "/api/stash": stash,
-       "/api/changes": changes, "/api/diff": diff, "/api/file": file, "/api/log": log}
+       "/api/changes": changes, "/api/diff": diff, "/api/file": file, "/api/log": log,
+       "/api/resolve": resolve}
 POST = {"/api/fetch": fetch}
 
 

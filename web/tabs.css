@@ -45,3 +45,22 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .caret { flex: none; width: 14px; color: var(--muted); font-size: 11px; }
 .tnode .frow { min-height: 40px; padding-left: 20px; }
 .tnode:last-child .frow, .part + .tnode:last-of-type .frow { border-bottom: 0; }
+
+/* ---- 探す欄 ---- */
+.search .page-top { padding-right: 14px; }
+.find {
+  flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 2px solid var(--accent); border-radius: 10px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; /* 16px 未満だと iPhone が拡大する */
+}
+.search-body { flex: 1; overflow-y: auto; padding: 4px 14px 24px; }
+.res-card {
+  display: grid; grid-template-columns: 64px 1fr; gap: 6px 8px; width: 100%; margin: 8px 0; padding: 12px 14px;
+  border: 1px solid var(--accent); border-radius: 12px; background: var(--accent-bg); color: var(--ink);
+  font: inherit; font-size: 13px; text-align: left; overflow-wrap: anywhere;
+}
+.res-card.missing { border-color: var(--line-strong); background: none; }
+.res-card .k { color: var(--muted); font-size: 12px; }
+.res-card .miss { color: var(--err); font-size: 12px; }
+.ex { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ex code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; }
+.ex small { font-size: 11px; color: var(--muted); }
