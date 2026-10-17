@@ -23,6 +23,9 @@ const ICON = {
 };
 const RANK = { head: 0, wt: 1, local: 2, remote: 3, tag: 4 };
 
+// origin より何コミット先か・遅れているか。どちらも 0 なら出さない(雲の印が「同じ」を示す)
+const track = (c) => (c.ahead ? `<b class="ahead">↑${c.ahead}</b>` : "") + (c.behind ? `<b class="behind">↓${c.behind}</b>` : "");
+
 // local と同名の origin が同じコミットにあれば 1 枚にまとめて雲の印。ワークツリーを先に並べる
 function chips(refs) {
   const mine = new Set(refs.filter((r) => r.t === "local" || r.t === "head").map((r) => r.n));
@@ -34,7 +37,7 @@ function chips(refs) {
       out.push({ k: "remote", n: r.n });
     } else if (r.t === "head" || r.t === "local") {
       const sync = refs.some((x) => x.t === "remote" && x.n.endsWith(`/${r.n}`));
-      out.push({ k: r.t === "head" ? "head" : r.wt ? "wt" : "local", n: r.n, sync, folder: !!r.wt });
+      out.push({ k: r.t === "head" ? "head" : r.wt ? "wt" : "local", n: r.n, sync, folder: !!r.wt, ahead: r.ahead, behind: r.behind });
     } else if (r.t === "wt") {
       out.push({ k: "wt", n: r.n, folder: true });
     } else {
@@ -43,7 +46,7 @@ function chips(refs) {
   }
   out.sort((a, b) => RANK[a.k] - RANK[b.k]);
   const html = out.slice(0, 2).map((c) =>
-    `<span class="chip ${c.k}">${c.folder ? ICON.folder : ""}${c.k === "tag" ? ICON.tag : ""}<span>${esc(c.n)}</span>${c.sync ? ICON.cloud : ""}</span>`);
+    `<span class="chip ${c.k}">${c.folder ? ICON.folder : ""}${c.k === "tag" ? ICON.tag : ""}<span>${esc(c.n)}</span>${c.sync ? ICON.cloud : ""}${track(c)}</span>`);
   if (out.length > 2) html.push(`<span class="more">+${out.length - 2}</span>`);
   return html.join("");
 }
@@ -69,7 +72,7 @@ export function rowHtml(c, pad, github) {
   }
   const head = c.refs.some((r) => r.t === "head");
   const inner = `<div class="txt"><div class="subj">${esc(c.s)}</div>
-    <div class="meta">${chips(c.refs)}<span class="who">${esc(c.an)} · ${ago(c.at)}</span><span class="end sha">${c.h.slice(0, 7)}</span></div></div>`;
+    <div class="meta">${chips(c.refs)}${c.pushed === false ? '<span class="unpushed">未プッシュ</span>' : ""}<span class="who">${esc(c.an)} · ${ago(c.at)}</span><span class="end sha">${c.h.slice(0, 7)}</span></div></div>`;
   const cls = `row${head ? " head" : ""}`;
   // GitHub が無いリポ(origin 無し)は開く先が無いので、リンクにしない
   return github

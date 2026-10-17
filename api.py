@@ -7,6 +7,7 @@ import subprocess
 from dataclasses import dataclass
 
 import gitdata
+import pushstate
 import safe
 import worktree
 
@@ -39,7 +40,7 @@ def graph(q):
         limit = max(1, min(2000, int(one(q, "limit", "400"))))
     except ValueError:
         raise safe.Bad("limit は数で")
-    return worktree.decorate(repo, gitdata.graph(repo, limit))
+    return worktree.decorate(repo, pushstate.mark(repo, gitdata.graph(repo, limit)))
 
 
 def fetch(q):

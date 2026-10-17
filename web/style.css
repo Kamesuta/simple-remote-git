@@ -5,7 +5,7 @@
   --accent: #2457D6; --err: #B42318; --err-bg: #FDEDEA;
   --wip: #7D848D; --wip-bg: #EDF6F0; --stash-bg: #F3F0FA; --stash-ink: #6D4FC2;
   --l0: #2457D6; --l1: #C2410C; --l2: #0F766E; --l3: #7C3AED; --l4: #BE185D; --l5: #8A6A00; --l6: #15803D; --l7: #475569;
-  --head-bg: #0F7B5A; --head-fg: #FFFFFF;
+  --head-bg: #0F7B5A; --head-fg: #FFFFFF; --warn: #B45309;
   --wt-bg: #E2F3EA; --wt-fg: #0B5A41; --wt-bd: #93CDB2;
   --local-bg: #FFFFFF; --local-bd: #B8BCC3; --remote-bd: #A9AEB6;
   --tag-bg: #FFF3D1; --tag-fg: #6E5200; --tag-bd: #F0D98A;
@@ -21,7 +21,7 @@
   --accent: #7EA6FF; --err: #FF8F85; --err-bg: #2A1614;
   --wip: #79818B; --wip-bg: #121D18; --stash-bg: #1A1626; --stash-ink: #B9A2FF;
   --l0: #7EA6FF; --l1: #FB9A4B; --l2: #2DD4BF; --l3: #B99CFF; --l4: #F472B6; --l5: #E3C04B; --l6: #5EE38B; --l7: #A3B1C2;
-  --head-bg: #5ED3A0; --head-fg: #0E1012;
+  --head-bg: #5ED3A0; --head-fg: #0E1012; --warn: #F2B23A;
   --wt-bg: #12291F; --wt-fg: #7FD9B0; --wt-bd: #2B5A45;
   --local-bg: #16191D; --local-bd: #4A5059; --remote-bd: #4A5059;
   --tag-bg: #2E2610; --tag-fg: #E3C04B; --tag-bd: #5A4A1A;
@@ -104,6 +104,7 @@ svg path, svg circle { fill: none; stroke: currentColor; stroke-width: 2; stroke
 .g-merge { fill: var(--bg); stroke: var(--lc); stroke-width: 2; }
 .g-wipdot { fill: var(--wip-bg); stroke: var(--wip); stroke-width: 2; stroke-dasharray: 2.6 2.6; }
 .g-stash { fill: var(--stash-bg); stroke: var(--stash-ink); stroke-width: 2; }
+.g-unpushed { fill: var(--bg); stroke: var(--warn); stroke-width: 2.5; }
 .g-wip { --lc: var(--wip); }
 .g-c0 { --lc: var(--l0); } .g-c1 { --lc: var(--l1); } .g-c2 { --lc: var(--l2); } .g-c3 { --lc: var(--l3); }
 .g-c4 { --lc: var(--l4); } .g-c5 { --lc: var(--l5); } .g-c6 { --lc: var(--l6); } .g-c7 { --lc: var(--l7); }
@@ -131,6 +132,8 @@ a.row:active { background: var(--line); }
 .meta .end { margin-left: auto; flex-shrink: 0; }
 .sha { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; }
 .more { flex-shrink: 0; font-size: 11px; }
+.unpushed { flex-shrink: 0; color: var(--warn); font-weight: 600; }
+.chip .ahead, .chip .behind { flex-shrink: 0; font-weight: 600; margin-left: 2px; }
 
 .chip {
   display: inline-flex; align-items: center; gap: 3px; flex-shrink: 1; min-width: 0; max-width: 132px;

@@ -73,7 +73,7 @@ export function layout(commits) {
 
     while (lanes.length && lanes[lanes.length - 1] === null) lanes.pop();
     width = Math.max(width, lanes.length, col + 1);
-    rows.push({ col, color, kind, merge: c.p.length > 1, wip, lines });
+    rows.push({ col, color, kind, merge: c.p.length > 1, wip, lines, unpushed: c.pushed === false });
   }
   return { rows, width };
 }
@@ -96,6 +96,8 @@ export function render(lay, { lane = 12, row = 64, heads = new Set(), palette = 
     const x = X(r.col), y = top + row / 2;
     if (r.kind === "stash") nodes.push(`<rect class="g-stash" x="${x - 5}" y="${y - 5}" width="10" height="10" rx="2"/>`);
     else if (r.kind === "wip") nodes.push(`<circle class="g-wipdot" cx="${x}" cy="${y}" r="5"/>`);
+    // 未プッシュは中抜きの黄色い輪(マージの中抜きと見分けるため、色を変えて少し大きく)
+    else if (r.unpushed) nodes.push(`<circle class="g-unpushed" cx="${x}" cy="${y}" r="5"/>`);
     else if (r.merge) nodes.push(`<circle class="g-merge ${cls(r.color)}" cx="${x}" cy="${y}" r="4"/>`);
     else nodes.push(`<circle class="g-dot ${cls(r.color)}" cx="${x}" cy="${y}" r="${heads.has(i) ? 6 : 4.5}"/>`);
   });
