@@ -38,7 +38,7 @@ def tracking(repo: Path) -> dict[str, dict]:
 
 
 def mark(repo: Path, data: dict) -> dict:
-    """gitdata.graph() の結果に印を付ける。remote の無いリポは何もしない。"""
+    """graphlog.graph() の結果に印を付ける。remote の無いリポは何もしない。"""
     if not data.get("remotes"):
         return data
     unp, track = unpushed(repo), tracking(repo)

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from helpers import TmpCase, git, make_repo, touch
 import gitdata  # noqa: E402
+import graphlog  # noqa: E402
 import worktree  # noqa: E402
 
 
@@ -57,7 +58,7 @@ class Parse(unittest.TestCase):
         self.assertIsNone(f(None))
 
     def test_parse_refs(self):
-        refs = gitdata.parse_refs("HEAD -> dev, origin/dev, feature/x, tag: v1, origin/HEAD", {"origin"})
+        refs = graphlog.parse_refs("HEAD -> dev, origin/dev, feature/x, tag: v1, origin/HEAD", {"origin"})
         self.assertEqual([(r["t"], r["n"]) for r in refs], [
             ("head", "dev"), ("remote", "origin/dev"), ("local", "feature/x"), ("tag", "v1"), ("remote", "origin/HEAD")])
 
@@ -76,7 +77,7 @@ class Decorate(TmpCase):
         git(self.repo, "commit", "-qam", "second")
 
     def graph(self):
-        return worktree.decorate(self.repo, gitdata.graph(self.repo))["commits"]
+        return worktree.decorate(self.repo, graphlog.graph(self.repo))["commits"]
 
     def test_worktree_marks_and_wip_above_head(self):
         first = git(self.repo, "rev-parse", "HEAD~1")

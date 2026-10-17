@@ -7,7 +7,8 @@
 from pathlib import Path
 
 import safe
-from gitdata import _git, _origin, github_url, parse_refs
+from gitdata import _git, _origin, github_url
+from graphlog import parse_refs
 
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"  # 根のコミットや untracked を「空から」比べる相手
 _META = "%H%x1f%P%x1f%an%x1f%at%x1f%D%x1f%s%x1f%b"

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import diffs
 import gitdata
 import gitshow
+import graphlog
 import pathres
 import pushstate
 import safe
@@ -44,7 +45,7 @@ def graph(q):
         limit = max(1, min(2000, int(one(q, "limit", "400"))))
     except ValueError:
         raise safe.Bad("limit は数で")
-    return worktree.decorate(repo, pushstate.mark(repo, gitdata.graph(repo, limit)))
+    return worktree.decorate(repo, pushstate.mark(repo, graphlog.graph(repo, limit)))
 
 
 def fetch(q):

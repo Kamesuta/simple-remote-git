@@ -2,7 +2,7 @@
 import unittest
 
 from helpers import TmpCase, git, make_repo
-import gitdata  # noqa: E402
+import graphlog  # noqa: E402
 import pushstate  # noqa: E402
 
 
@@ -15,7 +15,7 @@ class Mark(TmpCase):
         git(self.repo, "push", "-q", "-u", "origin", "main")
 
     def graph(self):
-        return pushstate.mark(self.repo, gitdata.graph(self.repo))["commits"]
+        return pushstate.mark(self.repo, graphlog.graph(self.repo))["commits"]
 
     def test_local_commit_is_unpushed_and_ahead(self):
         (self.repo / "a.txt").write_text("2")

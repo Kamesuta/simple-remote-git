@@ -116,7 +116,7 @@ def insert_extras(commits: list[dict], extras: list[dict]) -> list[dict]:
 
 
 def decorate(repo: Path, data: dict) -> dict:
-    """gitdata.graph() の結果にワークツリーの印・未コミット・スタッシュを足す。"""
+    """graphlog.graph() の結果にワークツリーの印・未コミット・スタッシュを足す。"""
     wts = worktrees(repo)
     mark_worktrees(data["commits"], wts)
     with ThreadPoolExecutor(max_workers=8) as ex:  # my-app は worktree が 15 あるので並べる
