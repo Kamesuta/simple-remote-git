@@ -4,15 +4,15 @@
 import { esc } from "../graph/rows.js";
 import { api, q } from "../lib/api.js";
 
-const EXAMPLES = [
+const examples = (root) => [
   ["docs/README.md", "いま見ているリポの中のパス"],
-  ["~/softdata/git/my-app/…", "フルパス。別のリポでも開く"],
+  [`${root}/<リポ>/…`, "フルパス。別のリポでも開く"],
   [".claude/worktrees/feat-x/web/app.js", "ワークツリーの中の版で開く"],
   ["web/app.js:120", "行番号付きならその行へ"],
 ];
 
-const examplesHtml = () => `<h4 class="part">こんな形を貼れる</h4>`
-  + EXAMPLES.map(([a, b]) => `<div class="ex"><code>${esc(a)}</code><small>${b}</small></div>`).join("");
+const examplesHtml = (root) => `<h4 class="part">こんな形を貼れる</h4>`
+  + examples(root).map(([a, b]) => `<div class="ex"><code>${esc(a)}</code><small>${b}</small></div>`).join("");
 
 function cardHtml(m, i, current) {
   const ver = m.main ? "作業中(本体)" : `作業中(${m.wt})`;
@@ -31,7 +31,7 @@ export function searchPage(r, ctx) {
       <button type="button" class="back" aria-label="閉じる">‹</button>
       <input type="search" class="find" placeholder="パスを貼る(:行 も可)" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
     </header>
-    <div class="search-body">${examplesHtml()}</div>`;
+    <div class="search-body">${examplesHtml(ctx.root())}</div>`;
   const input = el.querySelector(".find");
   const body = el.querySelector(".search-body");
   let seq = 0, timer = null, matches = [];
@@ -41,7 +41,7 @@ export function searchPage(r, ctx) {
 
   async function run(text, auto) {
     const my = ++seq;
-    if (!text.trim()) { body.innerHTML = examplesHtml(); return; }
+    if (!text.trim()) { body.innerHTML = examplesHtml(ctx.root()); return; }
     body.innerHTML = '<p class="note">探しています…</p>';
     try {
       const res = await api(`/api/resolve?${q({ repo: r.repo, path: text })}`);
@@ -52,7 +52,7 @@ export function searchPage(r, ctx) {
       body.innerHTML = matches.length
         ? `<h4 class="part">パスとして読んだ</h4>${matches.map((m, i) => cardHtml(m, i, r.repo)).join("")}`
           + (matches.length > 1 ? '<p class="note">いくつかのリポに同じパスがあるので選ぶ</p>' : "")
-        : '<p class="note">パスとして読めなかった(~/softdata/git の下のリポのファイルだけ開ける)</p>' + examplesHtml();
+        : `<p class="note">パスとして読めなかった(${esc(ctx.root())} の下のリポのファイルだけ開ける)</p>` + examplesHtml(ctx.root());
     } catch (e) {
       if (my === seq) body.innerHTML = `<p class="note err">${esc(e.message)}</p>`;
     }

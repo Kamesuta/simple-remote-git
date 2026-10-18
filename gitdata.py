@@ -1,4 +1,4 @@
-"""~/softdata/git のリポジトリを読む。一覧・グラフ用のログ・フェッチ。
+"""リポを並べた場所(ROOT)のリポジトリを読む。一覧・グラフ用のログ・フェッチ。
 
 サーバー(server.py)から呼ぶ。git は必ずサブプロセスで叩き、外から来た文字列を
 パスや引数に直接入れない(リポ名は一覧の名前と照合してから使う)。
@@ -10,7 +10,8 @@ import threading
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("SRG_ROOT", Path.home() / "softdata" / "git"))
+# 既定はこのアプリを置いたフォルダの親。リポを並べている場所に clone すれば、その隣のリポが並ぶ
+ROOT = Path(os.environ.get("SRG_ROOT") or Path(__file__).resolve().parent.parent).expanduser()
 RECENT = 6
 FETCH_TIMEOUT = 30
 # 開くたびに自動フェッチするので、続けて開いたときに同じリポを何度も叩かない
@@ -65,6 +66,15 @@ def scan(root: Path | None = None) -> list[tuple[float, Path]]:
             if (c / ".git").is_dir():  # .git がファイルの worktree そのものは本体と重なるので数えない
                 found.append((last_used(c / ".git"), c))
     return sorted(found, key=lambda t: t[0], reverse=True)
+
+
+def root_label(root: Path | None = None) -> str:
+    """画面に出す ROOT。ホームの下なら ~ で縮める(スマホの狭い帯に収めるため)。"""
+    root = (root or ROOT).resolve()
+    try:
+        return "~/" + root.relative_to(Path.home().resolve()).as_posix()
+    except ValueError:
+        return root.as_posix()
 
 
 def list_repos(root: Path | None = None, n: int = RECENT) -> list[dict]:

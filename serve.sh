@@ -6,7 +6,8 @@
 #   graph-share attach   tmux に入ってログを見る(抜けるのは Ctrl-b d)
 #   graph-share stop     畳む(tailscale serve は 7443 だけ外す)
 #
-# graph-share は ~/.local/bin からこのファイルへのシンボリックリンク。
+# PATH の通った場所(~/.local/bin など)に graph-share という名前でこのファイルへのリンクを張って使う。
+# 見るリポの場所は SRG_ROOT(既定はこのフォルダの親)。
 #
 # サーバーは 127.0.0.1 だけで待つ。外からは tailnet の HTTPS(7443)からしか届かない。
 set -eu
@@ -46,7 +47,7 @@ case "${1:-}" in
   attach)
     exec tmux attach -t "$SESSION" ;;
   "") ;;
-  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
 
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
@@ -54,7 +55,7 @@ if ! tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "ポート $PORT を誰かが使っている(lsof -nP -iTCP:$PORT で確かめること)" >&2; exit 1
   fi
   # 落ちてもログが見られるよう、終わったら Enter を待つ
-  tmux new-session -d -s "$SESSION" "cd '$DIR' && python3 server.py; echo '(止まった。Enter で閉じる)'; read _"
+  tmux new-session -d -s "$SESSION" "cd '$DIR' && SRG_ROOT='${SRG_ROOT:-}' python3 server.py; echo '(止まった。Enter で閉じる)'; read _"
 fi
 wait_ready
 tailscale serve --bg --https="$HTTPS_PORT" "http://127.0.0.1:$PORT" >/dev/null

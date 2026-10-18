@@ -15,6 +15,7 @@ import { sheet } from "./views/sheet.js";
 
 const $ = (id) => document.getElementById(id);
 let repos = [];
+let root = "";  // リポを並べた場所(~/…)。サーバーが決める
 let depth = 0; // アプリの中で積んだ履歴の数
 let layerKey = null; // いま重ねている画面の #(同じなら作り直さない)
 
@@ -40,12 +41,12 @@ function back() {
   else go(parent(route()), { replace: true });
 }
 
-const ctx = { go, back, github: graph.github, findCommit: graph.findCommit };
+const ctx = { go, back, github: graph.github, findCommit: graph.findCommit, root: () => root };
 
 function header(repo) {
   const r = repos.find((x) => x.name === repo) ?? { name: repo };
   $("repo-label").textContent = label(r);
-  $("repo-path").textContent = `~/softdata/git/${repo}`;
+  $("repo-path").textContent = `${root}/${repo}`;
   document.title = `${label(r)} — Git Graph`;
   for (const b of $("repos").children) {
     b.setAttribute("aria-pressed", String(b.dataset.name === repo));
@@ -115,7 +116,7 @@ setupTheme();
 
 async function start() {
   try {
-    repos = await api("/api/repos");
+    ({ root, repos } = await api("/api/repos"));
   } catch (e) {
     $("status").dataset.state = "err";
     $("status-text").textContent = `一覧を読めませんでした: ${e.message}`;
@@ -124,7 +125,7 @@ async function start() {
   $("repos").innerHTML = repos.map((r) =>
     `<button type="button" data-name="${esc(r.name)}" aria-pressed="false">${esc(label(r))}</button>`).join("");
   if (!repos.length && !location.hash) {
-    $("status-text").textContent = "~/softdata/git に git リポが見つかりません";
+    $("status-text").textContent = `${root} に git リポが見つかりません`;
     return;
   }
   history.replaceState({ d: 0 }, "", build(route()));

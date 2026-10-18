@@ -72,6 +72,9 @@ class Handle(TmpCase):
         self.assertEqual(api.handle("GET", "/api/graph", {"repo": ["../r"]})[0], 404)
         self.assertEqual(api.handle("GET", "/api/graph", {"repo": ["r"], "limit": ["x"]})[0], 400)
         self.assertEqual(api.handle("GET", "/api/nope", {})[0], 404)
+        code, body = api.handle("GET", "/api/repos", {})
+        self.assertEqual([r["name"] for r in body["repos"]], ["r"])
+        self.assertEqual(body["root"], gitdata.root_label(self.root))
 
 
 if __name__ == "__main__":

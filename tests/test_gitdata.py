@@ -47,6 +47,11 @@ class ListRepos(TmpCase):
         for bad in ("../ok", "ok/", "", "/etc", "nope"):
             self.assertIsNone(gitdata.resolve(bad, self.root), bad)
 
+    def test_root_label_shortens_home(self):
+        from pathlib import Path
+        self.assertEqual(gitdata.root_label(Path.home() / "src"), "~/src")
+        self.assertEqual(gitdata.root_label(self.root), self.root.resolve().as_posix())
+
 
 class Parse(unittest.TestCase):
     def test_github_url(self):

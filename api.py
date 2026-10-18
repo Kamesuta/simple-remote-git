@@ -1,6 +1,6 @@
 """/api/* の振り分け。server.py は HTTP の受け口だけにして、ここで引数を検査して各モジュールを呼ぶ。
 
-どの API も repo を受け、gitdata.resolve で ~/softdata/git の下のリポと照合してから使う。
+どの API も repo を受け、gitdata.resolve で ROOT の下のリポと照合してから使う。
 返すのは (状態コード, 本体)。本体が Raw ならそのままのバイト列、それ以外は JSON にする。
 """
 import subprocess
@@ -32,12 +32,12 @@ def repo_of(q: dict):
     name = one(q, "repo", "")
     path = gitdata.resolve(name)
     if path is None:
-        raise safe.NotFound(f"そのリポは ~/softdata/git に無い: {name}")
+        raise safe.NotFound(f"そのリポは {gitdata.root_label()} に無い: {name}")
     return path
 
 
 def repos(q):
-    return gitdata.list_repos()
+    return {"root": gitdata.root_label(), "repos": gitdata.list_repos()}
 
 
 def graph(q):
