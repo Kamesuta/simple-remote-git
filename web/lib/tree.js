@@ -32,11 +32,13 @@ function compact(node) {
   };
 }
 
-// 画面に並べる順の行にする。closed にあるフォルダ(path)は中を出さない。フォルダを先、ファイルを後
+// 画面に並べる順の行にする。閉じたフォルダ(path)は中を出さない。フォルダを先、ファイルを後。
+// closed は Set か「閉じているか」を返す関数(ファイルのタブは、開いたものだけを覚えて残りを閉じる)
 export function flatten(tree, closed = new Set(), depth = 0, out = []) {
+  const shut = typeof closed === "function" ? closed : (p) => closed.has(p);
   for (const d of tree.dirs) {
-    out.push({ type: "dir", name: d.name, path: d.path, depth, open: !closed.has(d.path) });
-    if (!closed.has(d.path)) flatten(d, closed, depth + 1, out);
+    out.push({ type: "dir", name: d.name, path: d.path, depth, open: !shut(d.path) });
+    if (!shut(d.path)) flatten(d, shut, depth + 1, out);
   }
   for (const f of tree.files) out.push({ type: "file", f, depth });
   return out;

@@ -19,6 +19,7 @@ export function diffPage(r, ctx) {
       <button type="button" class="back" aria-label="戻る">‹</button>
       <div class="names"><h2>${esc(name)}</h2><p class="sub">${esc(dir)}</p></div>
       <span class="pos"></span>
+      <button type="button" class="hist-btn" hidden>履歴</button>
     </header>
     <div class="tools">
       <div class="seg"><button type="button" data-v="diff" aria-pressed="${mode === "diff"}">差分</button><button type="button" data-v="file" aria-pressed="${mode === "file"}">ファイル</button></div>
@@ -47,6 +48,9 @@ async function load(el, r, ctx, mode) {
   const f = s.files[i] ?? { path: r.path };
   $(".sub").textContent = `${split(r.path)[1]} · ${s.title}`;
   $(".counts").innerHTML = f.add != null ? `<i class="n-add">+${f.add}</i> <i class="n-del">−${f.del ?? 0}</i>` : "";
+  const hist = $(".hist-btn");
+  hist.hidden = false;
+  hist.onclick = () => ctx.go({ repo: r.repo, view: "history", ref: s.ref(f), path: r.path });
   const goFile = (g, v) => ctx.go({ ...s.route(g), v: v === "file" ? "file" : undefined }, { replace: true });
   for (const b of el.querySelectorAll(".seg button")) b.onclick = () => goFile(f, b.dataset.v);
   if (s.files.length > 1) {

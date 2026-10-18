@@ -8,6 +8,8 @@ import { build, parent, parse, tabOf } from "./lib/route.js";
 import { setupTheme } from "./lib/theme.js";
 import * as changes from "./views/changes.js";
 import { diffPage } from "./views/diff.js";
+import * as files from "./views/files.js";
+import { historyPage } from "./views/history.js";
 import { searchPage } from "./views/search.js";
 import { sheet } from "./views/sheet.js";
 
@@ -60,9 +62,11 @@ function show() {
   const tab = tabOf(r);
   $("graph").hidden = tab !== "graph";
   $("changes").hidden = tab !== "changes";
+  $("files").hidden = tab !== "files";
   for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
   if (r.view === "changes" || (tab === "changes" && $("changes").childElementCount === 0)) changes.show(r, ctx);
-  const key = ["commit", "stash", "diff", "search"].includes(r.view) ? build(r) : null;
+  if (r.view === "files" || (tab === "files" && $("files").childElementCount === 0)) files.show(r, ctx);
+  const key = ["commit", "stash", "diff", "search", "history"].includes(r.view) ? build(r) : null;
   if (key === layerKey) return;
   layerKey = key;
   const layer = $("layer");
@@ -70,6 +74,7 @@ function show() {
   if (r.view === "commit" || r.view === "stash") layer.append(sheet(r, ctx));
   else if (r.view === "diff") layer.append(diffPage(r, ctx));
   else if (r.view === "search") layer.append(searchPage(r, ctx));
+  else if (r.view === "history") layer.append(historyPage(r, ctx));
   // 重ねた画面だけをスクロールさせ、下のグラフは位置を保ったまま止めておく
   document.body.classList.toggle("locked", !!key);
 }

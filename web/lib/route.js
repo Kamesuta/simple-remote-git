@@ -9,9 +9,11 @@
 //   #/<repo>/w/<wt>/<part>/<path>    未コミットの差分(part は staged / unstaged / untracked)
 //   #/<repo>/open/<ref>/<path>       パスを貼って開いたファイル(ref は SHA か wt:<名>)
 //   #/<repo>/find                    探す欄
+//   #/<repo>/files?ref=<ref>         ファイルのタブ(ref の既定は本体の作業中)
+//   #/<repo>/hist/<ref>/<path>       そのファイルを変えたコミットの一覧
 //   ?v=file で差分でなくファイル、?line=42 でその行、?old= は名前変更の元の名前
 const enc = encodeURIComponent;
-const QUERY = ["v", "line", "old", "wt"];
+const QUERY = ["v", "line", "old", "wt", "ref"];
 export const PARTS = ["staged", "unstaged", "untracked"];
 
 export function parse(hash) {
@@ -23,6 +25,8 @@ export function parse(hash) {
   const [kind, a, b, c] = seg.slice(1);
   if (kind === "changes") r.view = "changes";
   else if (kind === "find") r.view = "search";
+  else if (kind === "files") r.view = "files";
+  else if (kind === "hist" && a && b) Object.assign(r, { view: "history", ref: a, path: b });
   else if (kind === "c" && a) Object.assign(r, b === "f" && c ? { view: "diff", src: "commit", h: a, path: c } : { view: "commit", h: a });
   else if (kind === "s" && a) {
     const name = `stash@{${a}}`;
@@ -37,6 +41,8 @@ export function build(r) {
   const stashN = () => r.name.slice(7, -1); // stash@{3} → 3
   if (r.view === "changes") s += "/changes";
   else if (r.view === "search") s += "/find";
+  else if (r.view === "files") s += "/files";
+  else if (r.view === "history") s += `/hist/${enc(r.ref)}/${enc(r.path)}`;
   else if (r.view === "commit") s += `/c/${r.h}`;
   else if (r.view === "stash") s += `/s/${stashN()}`;
   else if (r.view === "diff") {
@@ -48,6 +54,7 @@ export function build(r) {
   const qs = new URLSearchParams();
   for (const k of QUERY) {
     if (k === "wt" && r.view === "diff") continue; // 差分の wt は段に入っている
+    if (k === "ref" && r.view !== "files") continue; // ほかの画面の ref は段に入っている
     if (r[k] != null && r[k] !== "") qs.set(k, r[k]);
   }
   const tail = qs.toString();
@@ -55,12 +62,15 @@ export function build(r) {
 }
 
 // 下のタブのどちらの上に重ねるか。未コミットの差分は変更のタブから開くので、戻ったときもそこにいる
-export const tabOf = (r) => (r.view === "changes" || PARTS.includes(r.src) ? "changes" : "graph");
+export const tabOf = (r) => (r.view === "changes" || PARTS.includes(r.src) ? "changes"
+  : r.view === "files" || r.view === "history" || r.src === "open" ? "files" : "graph");
 
 // 「戻る」で行く先。アプリの中で積んだ履歴が無い(開き直した・貼ったリンクから来た)ときに使う
 export function parent(r) {
   if (r.view === "diff" && r.src === "commit") return { repo: r.repo, view: "commit", h: r.h };
   if (r.view === "diff" && r.src === "stash") return { repo: r.repo, view: "stash", name: r.name };
   if (r.view === "diff" && PARTS.includes(r.src)) return { repo: r.repo, view: "changes", wt: r.wt };
-  return { repo: r.repo, view: tabOf(r) === "changes" && r.view !== "changes" ? "changes" : "graph" };
+  if (r.view === "history") return { repo: r.repo, view: "diff", src: "open", ref: r.ref, path: r.path, v: "file" };
+  const tab = tabOf(r);
+  return { repo: r.repo, view: tab !== "graph" && r.view !== tab ? tab : "graph" };
 }

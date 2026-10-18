@@ -15,6 +15,8 @@ test("# は往復しても同じ状態に戻る(/ を含むリポ名とパスも
     { repo: "r", view: "diff", src: "unstaged", wt: "作業ツリー", path: "docs/README.md" },
     { repo: "r", view: "diff", src: "open", ref: "wt:feat-x", path: "a/b.py", line: "42", v: "file" },
     { repo: "r", view: "search" },
+    { repo: "r", view: "files", ref: "wt:feat-x" },
+    { repo: "r", view: "history", ref: "a1b2c3d", path: "web/app.js" },
   ];
   for (const r of cases) assert.deepEqual(parse(build(r)), r);
 });
@@ -30,6 +32,8 @@ test("戻る先とタブ", () => {
   assert.deepEqual(parent({ repo: "r", view: "diff", src: "commit", h: "abc1" }), { repo: "r", view: "commit", h: "abc1" });
   assert.deepEqual(parent({ repo: "r", view: "diff", src: "staged", wt: "w" }), { repo: "r", view: "changes", wt: "w" });
   assert.deepEqual(parent({ repo: "r", view: "commit", h: "abc1" }), { repo: "r", view: "graph" });
+  assert.deepEqual(parent({ repo: "r", view: "diff", src: "open", ref: "wt:x", path: "a" }), { repo: "r", view: "files" });
+  assert.equal(tabOf({ view: "history" }), "files");
 });
 
 const DIFF = `diff --git a/a.py b/a.py
