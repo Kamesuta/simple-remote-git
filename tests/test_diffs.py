@@ -65,8 +65,11 @@ class Content(TmpCase):
     def test_text_image_and_refusals(self):
         body, ctype = diffs.content(self.repo, self.h, "a.txt")
         self.assertEqual((body["text"], body["sha"], ctype), ("1", self.h, None))
+        (self.repo / "a.txt").write_text("ステージ")
+        git(self.repo, "add", "a.txt")
         (self.repo / "a.txt").write_text("作業中")
         self.assertEqual(diffs.content(self.repo, "wt:作業ツリー", "a.txt")[0]["text"], "作業中")
+        self.assertEqual(diffs.content(self.repo, "idx:作業ツリー", "a.txt")[0]["text"], "ステージ")
         (self.repo / "i.png").write_bytes(b"\x89PNG\r\n\0\0")
         self.assertEqual(diffs.content(self.repo, "wt:作業ツリー", "i.png")[1], "image/png")
         (self.repo / "b.bin").write_bytes(b"\0\1\2")

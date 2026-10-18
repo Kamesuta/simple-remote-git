@@ -68,9 +68,15 @@ def _as_text_or_raw(data: bytes, path: str, sha: str | None):
 
 
 def content(repo: Path, ref: str, path: str):
-    """ref はコミットの SHA か `wt:<ワークツリー名>`(作業中のディスク)。
+    """ref はコミットの SHA か `wt:<ワークツリー名>`(作業中のディスク)か `idx:<ワークツリー名>`(ステージした内容)。
     返すのは (JSON にする dict, None) か (画像のバイト列, Content-Type)。"""
     path = safe.rel_path(path)
+    if ref.startswith("idx:"):  # Markdown の差分を整形して比べるとき、未ステージの「前」はステージした内容
+        cwd = safe.worktree_path(repo, ref[4:])
+        r = _git(cwd, "show", f":{path}", text=False)
+        if r.returncode != 0:
+            raise safe.NotFound(f"ステージにそのファイルは無い: {path}")
+        return _as_text_or_raw(r.stdout, path, _git(cwd, "rev-parse", "HEAD").stdout.strip() or None)
     if ref.startswith("wt:"):
         cwd = safe.worktree_path(repo, ref[3:])
         real = safe.readable(cwd, path)
