@@ -1,71 +1,68 @@
 # simple-remote-git
 
-スマホで見る Git Graph。Mac で小さなサーバーを立て、`~/softdata/git` の中から最近使ったリポ 6 個のグラフを
-縦スクロールで見る。開くたびに裏で `git fetch` し、終わったら描き直す。
+**スマホで見る Git Graph。** Mac で小さなサーバーを立て、Tailscale 越しにスマホのホーム画面から開く。
+寝転がりながら、Claude Code などに任せた作業の進み具合 ― どのワークツリーで何を変えたか、何がまだプッシュされていないか ― を眺められる。
 
-Git Graph のようにブランチ・タグ・スタッシュを全部出したうえで、**ワークツリーと、GitHub にまだ無いものを目立たせる**:
+<p align="center">
+  <img src="docs/images/graph.png" width="30%" alt="グラフ">
+  <img src="docs/images/commit.png" width="30%" alt="コミットの詳細">
+  <img src="docs/images/diff.png" width="30%" alt="差分">
+</p>
 
-- ワークツリーで開いているブランチは緑のチップ + フォルダの印(本体の作業ツリーは濃い緑)
-- 未コミットの変更はワークツリーごとに 1 行、その HEAD の真上に点線でつなぐ
-- スタッシュは作ったときのコミットの真上に、紫の四角で出す
-- 未プッシュのコミットは黄色い中抜きの点と「未プッシュ」。ブランチのチップに ↑先行 ↓遅れ
+## ✨ ウリ
 
-見るだけの道具。コミット・プッシュ・ステージなど、書き換える操作は持たない。
+- **📱 スマホのための縦スクロール** ― 開いたら裏で `git fetch` して描き直す。最近触ったリポ 6 個をチップで切り替え
+- **🌿 GitHub にまだ無いものが一目で** ― ワークツリーごとの未コミットの変更、スタッシュ、未プッシュのコミット、ブランチの ↑先行 ↓遅れ
+- **🔍 差分をその場で読める** ― 未プッシュのコミットも、未コミットの変更も、スタッシュも。変わった語だけ濃く塗る。プッシュ済みなら GitHub へも 1 タップ
+- **📝 Markdown は GitHub の Rich Diff と同じ見え方** ― 整形したものどうしを比べ、足した塊は緑、消した塊は赤、直した段落は語の単位で。プレーンテキストにも切り替えられる
+- **📋 パスを貼るだけで開く** ― AI の返事にある `web/app.js:120` やフルパスを貼れば、そのファイルのその行へ。別のリポやワークツリーでも
+- **🗂 ファイルブラウザと履歴** ― 差分の無いフォルダも木でたどれる(gitignore されたものも薄く)。ファイルを変えたコミットの一覧へも
+- **🪶 依存ゼロ** ― Python の標準ライブラリと素の HTML/JS だけ。ビルドも `npm install` も venv も要らない
+- **👀 見るだけ** ― コミット・プッシュなど書き換える操作は持たない。`git status` も index を書き換えない形で叩く
 
-| 画面 | できること |
-| --- | --- |
-| グラフ | 行をタップするとコミット(スタッシュ)の詳細が下から上がる。GitHub へは詳細の中のボタンから |
-| 詳細 → 差分 | 変わったファイルを選ぶと差分。上の「差分 / ファイル」で同じ版のファイル全体へ。前後のファイルは横スワイプ |
-| 変更のタブ | ワークツリーごとの未コミットを、ステージ済み・未ステージ・新しいファイルに分けてフォルダの木で |
-| Markdown | `.md` は整形して表示(表・チェックボックス・`> [!NOTE]`・相対パスの画像)。差分は GitHub の Rich Diff と同じく、整形したものを比べて足した塊を緑、消した塊を赤、直した段落の中は語の単位で塗る。上の「整形 / テキスト」でプレーンテキスト(行番号付きのソースと行の差分)に切り替えられる |
-| ファイルのタブ | 差分の有無にかかわらず、フォルダの木で全部たどれる(gitignore されたものも薄く)。作業中・ブランチ・タグの版を選べ、名前で絞り込める。変えたファイルに M / U / D |
-| 履歴 | ファイル表示の右上から、そのファイルを変えたコミットの一覧 → その時の差分 |
-| 探す(虫眼鏡) | パスを貼ると開く。フルパス・リポの中のパス・ワークツリーのパス・`:42` の行番号付き。別のリポでも |
+<p align="center">
+  <img src="docs/images/changes.png" width="30%" alt="ワークツリーごとの変更">
+  <img src="docs/images/markdown.png" width="30%" alt="Markdown の Rich Diff">
+  <img src="docs/images/files.png" width="30%" alt="ファイルブラウザ">
+</p>
 
-画面は URL の # で表すので、スマホの「戻る」が効き、ホーム画面から開き直しても同じ場所に戻る。
-依存はゼロ(Python 標準ライブラリと素の HTML/JS)。ビルドも venv も要らない。
+## 🚀 使い方
 
-## 使い方
+要るもの: Python 3.10 以上・git・tmux・[Tailscale](https://tailscale.com)(tailnet で HTTPS を有効にしておく)。Mac で使っている。
 
 ```sh
-graph-share          # tmux(graph)で立て、tailscale serve で tailnet にだけ出して URL を出す
-graph-share stop     # 畳む(tailscale serve は 7443 だけ外す)
-graph-share attach   # ログを見る
+cd ~/src                     # リポを並べている場所に clone する(その隣のリポが並ぶ)
+git clone https://github.com/Kamesuta/simple-remote-git.git
+ln -s "$PWD/simple-remote-git/serve.sh" ~/.local/bin/graph-share   # PATH の通った場所に
+graph-share                  # tmux で立て、tailnet にだけ出して URL を表示
 ```
 
-出た URL(`https://<mac>.<tailnet>.ts.net:7443/`)をスマホで開き、ホーム画面に追加すればアプリのように開ける。
-Claude Code からは「Git Graph 立てて」で `~/.claude/skills/git-graph` が呼ぶ。
+出た URL(`https://<Mac の名前>.<tailnet>.ts.net:7443/`)をスマホで開き、ホーム画面に追加すればアプリのように開ける。
 
-## 作り
-
-| ファイル | 役目 |
+| コマンド | すること |
 | --- | --- |
-| `server.py` | `127.0.0.1:7420` で待つ HTTP の受け口と `web/` の配信 |
-| `api.py` | `/api/*` の振り分け(一覧は `GET` / `POST` の表) |
-| `safe.py` | 外から来た SHA・スタッシュ名・パス・ワークツリー名の検査 |
-| `gitdata.py` | リポを探す・最近使った順・フェッチ |
-| `graphlog.py` / `worktree.py` / `pushstate.py` | グラフのログ、ワークツリー・未コミット・スタッシュの差し込み、未プッシュの印 |
-| `gitshow.py` / `wipfiles.py` / `diffs.py` | コミット・スタッシュの詳細、ワークツリーごとの未コミット、1 ファイルの差分と中身 |
-| `tree.py` | ファイルのタブ用に、ある版のファイル全部(作業中は gitignore されたものも)と変更の印、選べる版、無視されたフォルダの中身 |
-| `pathres.py` | 貼ったパスを {リポ, ワークツリー, パス, 行} に読み替える |
-| `web/app.js` | 起動と # の振り分け。`web/graph/`(グラフ)・`web/views/`(詳細・変更・ファイル・履歴・探す。差分の画面と Markdown は `page/`)・`web/lib/`(API・#・差分の分解・木) |
+| `graph-share` | 立てて URL を出す(立っていれば URL を出し直すだけ) |
+| `graph-share stop` | 畳む(tailscale serve は 7443 だけ外す) |
+| `graph-share attach` | tmux に入ってログを見る |
 
-- 「最近使った」は `.git/index`・`.git/logs/HEAD` とワークツリー側の同じファイルの更新時刻で決める。
-  `FETCH_HEAD` は数えない(自動フェッチで順位が動かないように)。status と diff は `--no-optional-locks` で叩き、見ただけで index を書き換えない
-- リポ名は `~/softdata/git` の下(1 階層潜った束ねも)にあるリポと完全一致したものだけ受ける(外からパスを渡させない)
-- gitignore されたファイルも、ファイルのタブに薄く出して開ける(`.env` も。tailnet の中だけなのでそれでよいと決めた)。
-  丸ごと無視されたフォルダ(`node_modules` など)は 1 行だけ出し、開いたときに中を読む。パスの `..`・リンクでワークツリーの外へ出るものは断る
-- 見た目は Design キャンバス、差分とファイルの画面は構想のドキュメント
-  で決めたもの
-- Markdown は [marked](https://marked.js.org)(MIT)で整形し、[DOMPurify](https://github.com/cure53/DOMPurify)(Apache-2.0 / MPL-2.0)で危ない HTML を落とす。
-  どちらも `web/vendor/` に置き(ライセンスも同じ場所)、Markdown を開いたときだけ読む
-- アイコンの線は [Lucide](https://lucide.dev) の `git-graph` と `search`(ISC License)
+- 見るリポの場所を変えるときは `SRG_ROOT=~/work graph-share`。束ねるだけのフォルダ(`games/server` のような形)は 1 階層潜って探す
+- Tailscale を使わず手元で試すなら `python3 server.py` で http://127.0.0.1:7420/
 
-## テスト
+> [!WARNING]
+> tailnet の中の端末からは、`SRG_ROOT` の下のリポのファイルを **gitignore されたもの(`.env` など)も含めて** 読める。
+> サーバーは 127.0.0.1 だけで待ち、外へは `tailscale serve` で tailnet の中にだけ出す(Funnel は使わない)。
+> 人と共有している tailnet なら、ACL で自分の端末だけに絞ること。
+
+## 🛠 開発
 
 ```sh
 python3 -m unittest discover tests
 node --test tests/*.test.mjs
 ```
 
-`SRG_ROOT`(リポを探す場所)と `SRG_PORT`(待つポート)で、試しのリポに向けたサーバーも立てられる。
+サーバーは `server.py`(受け口)と `api.py`(`/api/*` の表)から読むと早い。画面は `web/app.js` から。
+`SRG_PORT` で待つポートを変えられるので、試しのリポを並べた `SRG_ROOT` と組み合わせて別に立てられる。
+
+## 📄 ライセンス
+
+[MIT](LICENSE)。同梱している [marked](https://marked.js.org)(MIT)と [DOMPurify](https://github.com/cure53/DOMPurify)(Apache-2.0 / MPL-2.0)は `web/vendor/` にそれぞれのライセンスと置いてある。アイコンの線は [Lucide](https://lucide.dev)(ISC)。
