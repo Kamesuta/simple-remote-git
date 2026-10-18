@@ -1,7 +1,7 @@
 // 差分とファイルの中身を、行番号付きの行の並び(HTML の文字列)にする。
 // 差分は unified(スマホの幅に左右 2 列は入らないため)。変わった語は <b> で太字と色にする。
-import { esc } from "../graph/rows.js";
-import { pairWords, parse } from "../lib/unidiff.js";
+import { esc } from "../../graph/rows.js";
+import { pairWords, parse } from "../../lib/unidiff.js";
 
 const SIGN = { add: "+", del: "−", ctx: "" };
 

@@ -7,7 +7,7 @@ import { api } from "./lib/api.js";
 import { build, parent, parse, tabOf } from "./lib/route.js";
 import { setupTheme } from "./lib/theme.js";
 import * as changes from "./views/changes.js";
-import { diffPage } from "./views/diff.js";
+import { diffPage } from "./views/page/diff.js";
 import * as files from "./views/files.js";
 import { historyPage } from "./views/history.js";
 import { searchPage } from "./views/search.js";

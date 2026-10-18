@@ -1,0 +1,54 @@
+/* Markdown の整形表示と Rich Diff。GitHub の見た目に寄せ、色は style.css / views.css の変数を使う */
+.markdown {
+  padding: 8px 16px 80px; color: var(--ink); overflow-wrap: anywhere;
+  font-family: 'IBM Plex Sans JP', 'Hiragino Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.7;
+}
+.markdown > :first-child { margin-top: 8px; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { margin: 24px 0 12px; font-weight: 600; line-height: 1.3; }
+.markdown h1 { font-size: 1.6em; padding-bottom: .3em; border-bottom: 1px solid var(--line); }
+.markdown h2 { font-size: 1.35em; padding-bottom: .3em; border-bottom: 1px solid var(--line); }
+.markdown h3 { font-size: 1.15em; }
+.markdown h4 { font-size: 1em; }
+.markdown h5, .markdown h6 { font-size: .9em; color: var(--muted); }
+.markdown p, .markdown ul, .markdown ol, .markdown blockquote, .markdown table, .markdown pre, .markdown details { margin: 0 0 14px; }
+.markdown ul, .markdown ol { padding-left: 1.6em; }
+.markdown li + li, .markdown li > ul, .markdown li > ol { margin-top: .25em; }
+.markdown li > ul, .markdown li > ol { margin-bottom: 0; }
+.markdown li:has(> input[type="checkbox"]) { list-style: none; }
+.markdown li > input[type="checkbox"] { margin: 0 .35em 0 -1.4em; vertical-align: -1px; }
+.markdown a { color: var(--accent); text-decoration: none; }
+.markdown a:active { text-decoration: underline; }
+.markdown strong { font-weight: 600; }
+.markdown code {
+  padding: .15em .35em; border-radius: 6px; background: var(--hunk-bg);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 85%;
+}
+.markdown pre { padding: 12px 14px; border-radius: 8px; background: var(--hunk-bg); overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
+.markdown pre code { padding: 0; background: none; font-size: inherit; white-space: pre; }
+.markdown blockquote { padding: 0 1em; border-left: .25em solid var(--line-strong); color: var(--muted); }
+.markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 13px; line-height: 1.5; }
+.markdown th, .markdown td { padding: 6px 12px; border: 1px solid var(--line-strong); }
+.markdown th { background: var(--hunk-bg); font-weight: 600; }
+.markdown img { max-width: 100%; }
+.markdown hr { height: 3px; margin: 20px 0; border: 0; background: var(--line); }
+.markdown summary { cursor: pointer; }
+
+/* GitHub の囲み(> [!NOTE] など)。色で種類を分ける */
+.markdown .md-alert { color: var(--ink); border-left-color: var(--accent); }
+.markdown .md-alert-title { margin: 0 0 4px; font-weight: 600; color: var(--accent); }
+.md-tip { border-left-color: var(--ok) !important; } .md-tip .md-alert-title { color: var(--ok); }
+.md-important { border-left-color: var(--stash-ink) !important; } .md-important .md-alert-title { color: var(--stash-ink); }
+.md-warning { border-left-color: var(--warn) !important; } .md-warning .md-alert-title { color: var(--warn); }
+.md-caution { border-left-color: var(--err) !important; } .md-caution .md-alert-title { color: var(--err); }
+
+/* Rich Diff。足した塊は緑、消した塊は赤で取り消し線。変わった塊の中は語の単位で塗る */
+.rich ins { background: var(--add-strong); text-decoration: none; border-radius: 2px; }
+.rich del { background: var(--del-strong); text-decoration: line-through; border-radius: 2px; }
+.rd-add { background: var(--add-bg); }
+.rd-del { background: var(--del-bg); }
+.rd-del, .rd-del * { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--err) 60%, transparent); }
+/* いちばん上の段の塊は、左に色の帯を付けて端まで塗る(どこが変わったか縦に流し見で分かるように) */
+.markdown > .rd-add, .markdown > .rd-del { margin-left: -16px; margin-right: -16px; padding-left: 13px; padding-right: 16px; }
+.markdown > .rd-add { border-left: 3px solid var(--ok); }
+.markdown > .rd-del { border-left: 3px solid var(--err); }
+.markdown > ul.rd-add, .markdown > ol.rd-add, .markdown > ul.rd-del, .markdown > ol.rd-del { padding-left: calc(13px + 1.6em); }
