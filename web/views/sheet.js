@@ -2,6 +2,7 @@
 // 「GitHub で開く」はここに置く。未プッシュのうちは GitHub に無いので、押せない形にして理由を書く。
 import { ago, chips, esc } from "../graph/rows.js";
 import { getCommit, getStash } from "../lib/api.js";
+import { dragToClose, slideDown } from "../lib/drag.js";
 
 const BADGE = { A: "add", M: "mod", D: "del", R: "ren", C: "ren", T: "mod", U: "add", "!": "del" };
 
@@ -21,7 +22,9 @@ export function sheet(r, ctx) {
   const wrap = document.createElement("div");
   wrap.className = "sheet-wrap";
   wrap.innerHTML = '<div class="backdrop"></div><section class="sheet"><div class="grab"></div><div class="sheet-body"><p class="note">読み込み中…</p></div></section>';
-  wrap.querySelector(".backdrop").onclick = () => ctx.back();
+  const backdrop = wrap.querySelector(".backdrop"), panel = wrap.querySelector(".sheet");
+  backdrop.onclick = () => slideDown(panel, backdrop, ctx.back);
+  dragToClose(panel, backdrop, ctx.back);
   const body = wrap.querySelector(".sheet-body");
   const load = r.view === "commit" ? getCommit(r.repo, r.h) : getStash(r.repo, r.name);
   load.then((d) => {
