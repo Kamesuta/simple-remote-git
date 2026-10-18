@@ -13,6 +13,7 @@ import graphlog
 import pathres
 import pushstate
 import safe
+import tree
 import wipfiles
 import worktree
 
@@ -82,6 +83,14 @@ def resolve(q):
     return pathres.resolve(one(q, "path", ""), one(q, "repo"))
 
 
+def files(q):
+    return tree.tree(repo_of(q), one(q, "ref", "wt:作業ツリー"))
+
+
+def refs(q):
+    return tree.refs(repo_of(q))
+
+
 def file(q):
     body, ctype = diffs.content(repo_of(q), one(q, "ref", ""), one(q, "path"))
     return Raw(body, ctype) if ctype else body
@@ -89,7 +98,7 @@ def file(q):
 
 GET = {"/api/repos": repos, "/api/graph": graph, "/api/commit": commit, "/api/stash": stash,
        "/api/changes": changes, "/api/diff": diff, "/api/file": file, "/api/log": log,
-       "/api/resolve": resolve}
+       "/api/resolve": resolve, "/api/tree": files, "/api/refs": refs}
 POST = {"/api/fetch": fetch}
 
 
