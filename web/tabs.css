@@ -97,6 +97,9 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .xdot { flex: none; width: 7px; height: 7px; margin-left: auto; border-radius: 50%; background: var(--warn); }
 .m-mod { color: var(--warn); } .m-add { color: var(--ok); } .m-del { color: var(--err); text-decoration: line-through; } .m-ren { color: var(--accent); }
 .m-del .xmark { text-decoration: none; }
+/* gitignore されたもの(VS Code と同じく薄く) */
+.xrow.ign { color: var(--muted); }
+.xrow.ign b { font-weight: 500; }
 
 /* ---- 履歴 ---- */
 .hist-btn { flex: none; padding: 5px 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: none; color: var(--ink); font: inherit; font-size: 13px; }

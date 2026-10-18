@@ -37,11 +37,10 @@ class Readable(TmpCase):
         self.assertEqual(safe.readable(self.repo, "a.txt"), self.repo / "a.txt")
         self.assertEqual(safe.readable(self.repo, "new.txt"), self.repo / "new.txt")
 
-    def test_refuses_ignored_missing_and_escape(self):
+    def test_reads_ignored_but_refuses_missing_and_escape(self):
         (self.repo / ".gitignore").write_text(".env\n")
         (self.repo / ".env").write_text("SECRET=1")
-        with self.assertRaises(safe.NotFound):
-            safe.readable(self.repo, ".env")
+        self.assertEqual(safe.readable(self.repo, ".env"), self.repo / ".env")  # 無視されたものも読む(本人の判断)
         with self.assertRaises(safe.NotFound):
             safe.readable(self.repo, "nope.txt")
         (self.root / "outside.txt").write_text("x")

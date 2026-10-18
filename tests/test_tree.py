@@ -1,4 +1,4 @@
-"""ファイルのタブ用の一覧(tree)を確かめる。差分の無いファイルも出し、gitignore されたものは出さない。"""
+"""ファイルのタブ用の一覧(tree)を確かめる。差分の無いファイルも、gitignore されたものも出す。"""
 from helpers import TmpCase, git, make_repo
 import safe  # noqa: E402
 import tree  # noqa: E402
@@ -20,9 +20,20 @@ class Tree(TmpCase):
         (self.repo / "a.txt").write_text("changed")
         (self.repo / "new.txt").write_text("n")
         (self.repo / ".env").write_text("SECRET")
+        (self.repo / "secret").mkdir()
+        (self.repo / "secret" / ".gitignore").write_text("*\n")  # other-app の docs/ と同じ形
+        (self.repo / "secret" / "note.md").write_text("n")
+        (self.repo / "secret" / "deep").mkdir()
+        (self.repo / "secret" / "deep" / "x.txt").write_text("x")
         t = tree.tree(self.repo, "wt:作業ツリー")
         self.assertEqual(t["files"], [".gitignore", "a.txt", "docs/b.md", "new.txt"])
         self.assertEqual(t["marks"], {"a.txt": "M", "new.txt": "U"})
+        self.assertIn(".env", t["ignored"])
+        self.assertEqual(t["ignoredDirs"], ["secret"])  # 丸ごと無視されたフォルダは 1 行だけ
+        d = tree.dir_entries(self.repo, "wt:作業ツリー", "secret")
+        self.assertEqual((d["files"], d["dirs"]), (["secret/.gitignore", "secret/note.md"], ["secret/deep"]))
+        with self.assertRaises(safe.Bad):
+            tree.dir_entries(self.repo, "wt:作業ツリー", "../r")
 
     def test_commit_version_and_refs(self):
         self.assertEqual(tree.tree(self.repo, self.h)["files"], [".gitignore", "a.txt", "docs/b.md"])

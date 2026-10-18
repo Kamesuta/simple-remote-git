@@ -87,6 +87,10 @@ def files(q):
     return tree.tree(repo_of(q), one(q, "ref", "wt:作業ツリー"))
 
 
+def dir_(q):
+    return tree.dir_entries(repo_of(q), one(q, "ref", "wt:作業ツリー"), one(q, "path"))
+
+
 def refs(q):
     return tree.refs(repo_of(q))
 
@@ -98,7 +102,8 @@ def file(q):
 
 GET = {"/api/repos": repos, "/api/graph": graph, "/api/commit": commit, "/api/stash": stash,
        "/api/changes": changes, "/api/diff": diff, "/api/file": file, "/api/log": log,
-       "/api/resolve": resolve, "/api/tree": files, "/api/refs": refs}
+       "/api/resolve": resolve, "/api/tree": files, "/api/refs": refs,
+       "/api/dir": dir_}
 POST = {"/api/fetch": fetch}
 
 

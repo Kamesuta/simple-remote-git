@@ -25,10 +25,25 @@ function label(ref, refs) {
   return named ? named.name : ref.slice(0, 7);
 }
 
-function fileLine(path, depth, marks, showDir) {
-  const name = path.split("/").pop(), m = marks[path];
+// 木に並べるもの: 追跡中と新しいファイル、gitignore されたもの(薄く出す)、丸ごと無視されたフォルダ。
+// 無視されたフォルダは、開いて中を読んだもの(cur.extra)だけ中身を足す
+function items() {
+  const { data, extra } = cur;
+  const out = data.files.map((path) => ({ path }));
+  for (const path of data.ignored ?? []) out.push({ path, ignored: true });
+  const dirs = [...(data.ignoredDirs ?? [])];
+  for (const e of extra.values()) {
+    for (const path of e.files) out.push({ path, ignored: true });
+    dirs.push(...e.dirs);
+  }
+  for (const path of dirs) out.push({ path, dir: true, ignored: true, lazy: !extra.has(path) });
+  return out;
+}
+
+function fileLine(f, depth, marks, showDir) {
+  const path = f.path, name = path.split("/").pop(), m = marks[path];
   const dir = showDir ? `<small>${esc(path.slice(0, -name.length) || "./")}</small>` : "";
-  return `<button type="button" class="xrow file${m ? ` m-${MARK[m] ?? "mod"}` : ""}" style="padding-left:${showDir ? 16 : 32 + depth * 16}px" data-path="${esc(path)}">`
+  return `<button type="button" class="xrow file${m ? ` m-${MARK[m] ?? "mod"}` : ""}${f.ignored ? " ign" : ""}" style="padding-left:${showDir ? 16 : 32 + depth * 16}px" data-path="${esc(path)}">`
     + `<span class="xname">${esc(name)}${dir}</span>${m ? `<b class="xmark">${esc(m)}</b>` : ""}</button>`;
 }
 
@@ -36,19 +51,19 @@ function listHtml(open) {
   const { data, tree, filter } = cur;
   if (filter.trim()) {
     const terms = filter.toLowerCase().split(/\s+/).filter(Boolean);
-    const hits = data.files.filter((p) => terms.every((t) => p.toLowerCase().includes(t)));
+    const hits = items().filter((f) => !f.dir && terms.every((t) => f.path.toLowerCase().includes(t)));
     // 名前(パスの最後)に当たったものを上に、短いパスを上に
-    const base = (p) => p.split("/").pop().toLowerCase();
-    hits.sort((a, b) => (terms.every((t) => base(b).includes(t)) - terms.every((t) => base(a).includes(t))) || a.length - b.length);
-    return hits.length ? hits.slice(0, 200).map((p) => fileLine(p, 0, data.marks, true)).join("")
+    const base = (f) => f.path.split("/").pop().toLowerCase();
+    hits.sort((a, b) => (terms.every((t) => base(b).includes(t)) - terms.every((t) => base(a).includes(t))) || a.path.length - b.path.length);
+    return hits.length ? hits.slice(0, 200).map((f) => fileLine(f, 0, data.marks, true)).join("")
       + (hits.length > 200 ? `<p class="note">ほか ${hits.length - 200} 件。もう少し絞る</p>` : "")
       : '<p class="note">当たるファイルが無い</p>';
   }
   const dirty = dirtyDirs(data.marks);
   return flatten(tree, (p) => !open.has(p)).map((r) => (r.type === "dir"
-    ? `<button type="button" class="xrow dir" style="padding-left:${12 + r.depth * 16}px" data-dir="${esc(r.path)}" aria-expanded="${r.open}">`
-      + `<span class="caret">${r.open ? "▾" : "▸"}</span><b>${esc(r.name)}</b>${dirty.has(r.path) ? '<i class="xdot"></i>' : ""}</button>`
-    : fileLine(r.f.path, r.depth, data.marks, false))).join("");
+    ? `<button type="button" class="xrow dir${r.ignored ? " ign" : ""}" style="padding-left:${12 + r.depth * 16}px" data-dir="${esc(r.path)}"${r.lazy ? ' data-lazy="1"' : ""} aria-expanded="${r.open && !r.lazy}">`
+      + `<span class="caret">${r.open && !r.lazy ? "▾" : "▸"}</span><b>${esc(r.name)}</b>${dirty.has(r.path) ? '<i class="xdot"></i>' : ""}</button>`
+    : fileLine(r.f, r.depth, data.marks, false))).join("");
 }
 
 function pickerHtml(ref, refs) {
@@ -70,7 +85,8 @@ export function show(r, ctx) {
   Promise.all([api(`/api/tree?${q({ repo: r.repo, ref })}`), cur.refs ?? api(`/api/refs?${q({ repo: r.repo })}`)])
     .then(([data, refs]) => {
       if (cur.key !== key) return;
-      Object.assign(cur, { data, refs, tree: buildTree(data.files.map((path) => ({ path }))) });
+      Object.assign(cur, { data, refs });
+      cur.tree = buildTree(items());
       el.querySelector(".ver").textContent = `${label(ref, refs)} ▾`;
       list.innerHTML = listHtml(open);
     }).catch((e) => { list.innerHTML = `<p class="note err">${esc(e.message)}</p>`; });
@@ -78,7 +94,7 @@ export function show(r, ctx) {
 
 function build(el, r, ctx, ref, key, open) {
   const sameRepo = cur.key?.startsWith(`${r.repo}\0`);
-  cur = { key, data: null, tree: null, refs: sameRepo ? cur.refs : null, filter: "" };
+  cur = { key, data: null, tree: null, refs: sameRepo ? cur.refs : null, filter: "", extra: new Map() };
   el.dataset.key = key;
   el.innerHTML = `<div class="files-top"><h3>ファイル</h3><button type="button" class="ver">${esc(label(ref, cur.refs))} ▾</button></div>
     <div class="picker" hidden></div>
@@ -86,6 +102,18 @@ function build(el, r, ctx, ref, key, open) {
     <div class="xlist"><p class="note">読み込み中…</p></div>`;
   const list = el.querySelector(".xlist"), picker = el.querySelector(".picker");
   const draw = () => { if (cur.data) list.innerHTML = listHtml(open); };
+  // 丸ごと無視されたフォルダは、開いたときに中(1 段)を読んで木に足す
+  const loadDir = (path) => {
+    const caret = list.querySelector(`[data-dir="${CSS.escape(path)}"] .caret`);
+    if (caret) caret.textContent = "…"; // 読んでいるあいだの印
+    api(`/api/dir?${q({ repo: r.repo, ref, path })}`).then((res) => {
+      if (cur.key !== key) return;
+      cur.extra.set(path, res);
+      open.add(path);
+      cur.tree = buildTree(items());
+      draw();
+    }).catch((e) => { list.insertAdjacentHTML("afterbegin", `<p class="note err">${esc(e.message)}</p>`); });
+  };
   el.querySelector(".xfilter").addEventListener("input", (e) => { cur.filter = e.target.value; draw(); });
   el.querySelector(".ver").onclick = () => {
     if (!cur.refs) return;
@@ -98,6 +126,7 @@ function build(el, r, ctx, ref, key, open) {
   };
   list.onclick = (e) => {
     const d = e.target.closest("[data-dir]");
+    if (d && d.dataset.lazy) return loadDir(d.dataset.dir);
     if (d) { if (open.has(d.dataset.dir)) open.delete(d.dataset.dir); else open.add(d.dataset.dir); return draw(); }
     const f = e.target.closest("[data-path]");
     if (!f) return;

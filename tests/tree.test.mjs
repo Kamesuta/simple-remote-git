@@ -22,3 +22,9 @@ test("閉じたフォルダは中を出さない", () => {
   assert.deepEqual(show(rows), ["a/"]);
   assert.equal(rows[0].open, false);
 });
+
+test("中をまだ読んでいないフォルダは、空でもフォルダとして出す(親とは畳んでも印は引き継ぐ)", () => {
+  const rows = flatten(buildTree([{ path: "a.txt" }, { path: "docs", dir: true, lazy: true, ignored: true }, { path: "x/y", dir: true, lazy: true }]));
+  assert.deepEqual(rows.map((r) => [r.type, r.name ?? r.f.path, !!r.lazy, !!r.ignored]),
+    [["dir", "docs", true, true], ["dir", "x/y", true, false], ["file", "a.txt", false, false]]);
+});

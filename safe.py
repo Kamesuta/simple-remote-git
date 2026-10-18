@@ -7,7 +7,6 @@ import re
 from pathlib import Path
 
 import worktree
-from gitdata import _git
 
 _SHA = re.compile(r"^[0-9a-f]{4,40}$")
 _STASH = re.compile(r"^stash@\{\d{1,4}\}$")
@@ -51,8 +50,8 @@ def worktree_path(repo: Path, name: str | None) -> Path:
 
 
 def readable(wt: Path, rel: str) -> Path:
-    """作業中のファイルをディスクから読んでよいか。ワークツリーの外(リンクで抜ける場合も)と、
-    gitignore されたもの(.env や鍵がたいていここに入る)は出さない。"""
+    """作業中のファイルをディスクから読んでよいか。ワークツリーの外(リンクで抜ける場合も)は出さない。
+    gitignore されたものも出す(手元だけの調査資料などを見たいため。tailnet の中だけなのでそれでよいと本人が決めた)。"""
     rel = rel_path(rel)
     root = wt.resolve()
     real = (wt / rel).resolve()
@@ -60,6 +59,16 @@ def readable(wt: Path, rel: str) -> Path:
         raise Bad(f"ワークツリーの外を指している: {rel}")
     if not real.is_file():
         raise NotFound(f"ファイルが無い: {rel}")
-    if _git(wt, "check-ignore", "-q", "--", rel).returncode == 0:
-        raise NotFound(f"gitignore されたファイルは出さない: {rel}")
+    return real
+
+
+def inside_dir(wt: Path, rel: str) -> Path:
+    """作業中のフォルダを一覧してよいか(無視されたフォルダを開いたときに中を読むため)。外へは出さない。"""
+    rel = rel_path(rel)
+    root = wt.resolve()
+    real = (wt / rel).resolve()
+    if root not in real.parents:
+        raise Bad(f"ワークツリーの外を指している: {rel}")
+    if not real.is_dir():
+        raise NotFound(f"フォルダが無い: {rel}")
     return real

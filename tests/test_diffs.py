@@ -76,8 +76,7 @@ class Content(TmpCase):
         self.assertTrue(diffs.content(self.repo, "wt:作業ツリー", "b.bin")[0]["binary"])
         (self.repo / ".gitignore").write_text(".env\n")
         (self.repo / ".env").write_text("SECRET")
-        with self.assertRaises(safe.NotFound):
-            diffs.content(self.repo, "wt:作業ツリー", ".env")
+        self.assertEqual(diffs.content(self.repo, "wt:作業ツリー", ".env")[0]["text"], "SECRET")
         with self.assertRaises(safe.NotFound):
             diffs.content(self.repo, self.h, "nope.txt")
         with self.assertRaises(safe.Bad):

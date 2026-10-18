@@ -2,16 +2,19 @@
 // `web/views` のように 1 行に畳む(VS Code と同じ。狭い画面で段が深くならないように)。
 // ブラウザでも node --test でも読めるよう、DOM には触らない。
 
+// 並びの 1 つが { path, dir: true } ならフォルダそのもの(中身はまだ読んでいない無視されたフォルダなど)。
+// lazy(中をまだ読んでいない)と ignored(gitignore された)はフォルダの行にそのまま渡す
 export function buildTree(files) {
   const root = { name: "", path: "", dirs: new Map(), files: [] };
   for (const f of files) {
     const parts = f.path.split("/");
     let node = root;
-    for (const d of parts.slice(0, -1)) {
+    for (const d of f.dir ? parts : parts.slice(0, -1)) {
       if (!node.dirs.has(d)) node.dirs.set(d, { name: d, path: node.path ? `${node.path}/${d}` : d, dirs: new Map(), files: [] });
       node = node.dirs.get(d);
     }
-    node.files.push(f);
+    if (f.dir) Object.assign(node, { lazy: !!f.lazy, ignored: !!f.ignored });
+    else node.files.push(f);
   }
   return compact(root);
 }
@@ -19,14 +22,14 @@ export function buildTree(files) {
 const byName = (a, b) => a.name.localeCompare(b.name);
 
 function compact(node) {
-  let n = { name: node.name, path: node.path, dirs: [...node.dirs.values()], files: node.files };
-  // ルートは畳まない(畳むと、いちばん上の段の名前が消える)
-  while (n.path && n.dirs.length === 1 && n.files.length === 0) {
+  let n = { ...node, dirs: [...node.dirs.values()] };
+  // ルートは畳まない(畳むと、いちばん上の段の名前が消える)。中をまだ読んでいないフォルダも畳まない
+  while (n.path && !n.lazy && n.dirs.length === 1 && n.files.length === 0) {
     const [only] = n.dirs;
-    n = { name: `${n.name}/${only.name}`, path: only.path, dirs: [...only.dirs.values()], files: only.files };
+    n = { ...only, name: `${n.name}/${only.name}`, dirs: [...only.dirs.values()] };
   }
   return {
-    name: n.name, path: n.path,
+    name: n.name, path: n.path, lazy: n.lazy, ignored: n.ignored,
     dirs: n.dirs.map(compact).sort(byName),
     files: [...n.files].sort((a, b) => a.path.localeCompare(b.path)),
   };
@@ -37,7 +40,7 @@ function compact(node) {
 export function flatten(tree, closed = new Set(), depth = 0, out = []) {
   const shut = typeof closed === "function" ? closed : (p) => closed.has(p);
   for (const d of tree.dirs) {
-    out.push({ type: "dir", name: d.name, path: d.path, depth, open: !shut(d.path) });
+    out.push({ type: "dir", name: d.name, path: d.path, depth, open: !shut(d.path), lazy: !!d.lazy, ignored: !!d.ignored });
     if (!shut(d.path)) flatten(d, shut, depth + 1, out);
   }
   for (const f of tree.files) out.push({ type: "file", f, depth });
