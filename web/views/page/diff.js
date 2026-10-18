@@ -26,9 +26,9 @@ export function diffPage(r, ctx) {
       <button type="button" class="hist-btn" hidden>履歴</button>
     </header>
     <div class="tools">
-      <div class="seg"><button type="button" data-v="diff" aria-pressed="${mode === "diff"}">差分</button><button type="button" data-v="file" aria-pressed="${mode === "file"}">ファイル</button></div>
+      <div class="seg view-seg"><button type="button" data-v="diff" aria-pressed="${mode === "diff"}">差分</button><button type="button" data-v="file" aria-pressed="${mode === "file"}">ファイル</button></div>
+      <div class="seg md-seg"${isMarkdown(r.path) ? "" : " hidden"}><button type="button" data-md="on">整形</button><button type="button" data-md="off">テキスト</button></div>
       <button type="button" class="wrap" aria-pressed="${wrapOn()}">折り返し</button>
-      <button type="button" class="wrap md-btn" aria-pressed="${mdOn()}"${isMarkdown(r.path) ? "" : " hidden"}>整形</button>
       <span class="counts"></span>
     </div>
     <div class="page-body${wrapOn() ? " wrapped" : ""}"><p class="note">読み込み中…</p></div>
@@ -57,7 +57,7 @@ async function load(el, r, ctx, mode) {
   hist.hidden = false;
   hist.onclick = () => ctx.go({ repo: r.repo, view: "history", ref: s.ref(f), path: r.path });
   const goFile = (g, v) => ctx.go({ ...s.route(g), v: v === "file" ? "file" : undefined }, { replace: true });
-  for (const b of el.querySelectorAll(".seg button")) b.onclick = () => goFile(f, b.dataset.v);
+  for (const b of el.querySelectorAll(".view-seg button")) b.onclick = () => goFile(f, b.dataset.v);
   if (s.files.length > 1) {
     $(".pos").textContent = `${i + 1} / ${s.files.length}`;
     const prev = s.files[i - 1], next = s.files[i + 1];
@@ -69,12 +69,20 @@ async function load(el, r, ctx, mode) {
     $(".hint").hidden = !!(prev && next); // 両側にファイル名が並ぶと案内の入る幅が無い
     swipe($(".page-body"), () => next && goFile(next, r.v), () => prev && goFile(prev, r.v));
   }
-  const md = $(".md-btn");
-  md.onclick = () => {
-    try { localStorage.setItem("md", mdOn() ? "off" : "on"); } catch { /* 今だけ切り替わる */ }
-    md.setAttribute("aria-pressed", String(mdOn()));
-    paint(el, r, ctx, mode, s, f).catch((e) => { $(".page-body").innerHTML = `<p class="note err">${esc(e.message)}</p>`; });
+  // Markdown は「整形 / テキスト」で切り替える。整形しているあいだは折り返しが要らないので隠す
+  const syncMd = () => {
+    for (const b of el.querySelectorAll(".md-seg button")) b.setAttribute("aria-pressed", String((b.dataset.md === "on") === mdOn()));
+    $(".wrap").hidden = isMarkdown(r.path) && mdOn();
   };
+  for (const b of el.querySelectorAll(".md-seg button")) {
+    b.onclick = () => {
+      if ((b.dataset.md === "on") === mdOn()) return;
+      try { localStorage.setItem("md", b.dataset.md); } catch { /* 今だけ切り替わる */ }
+      syncMd();
+      paint(el, r, ctx, mode, s, f).catch((e) => { $(".page-body").innerHTML = `<p class="note err">${esc(e.message)}</p>`; });
+    };
+  }
+  syncMd();
   await paint(el, r, ctx, mode, s, f);
 }
 
