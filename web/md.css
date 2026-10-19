@@ -52,3 +52,5 @@
 .markdown > .rd-add { border-left: 3px solid var(--ok); }
 .markdown > .rd-del { border-left: 3px solid var(--err); }
 .markdown > ul.rd-add, .markdown > ol.rd-add, .markdown > ul.rd-del, .markdown > ol.rd-del { padding-left: calc(13px + 1.6em); }
+/* 変わっていない段落を畳んだ所。端まで帯にしてタップで開く */
+.markdown > .fold { display: block; width: calc(100% + 32px); margin: 0 -16px 14px; border: 0; }

@@ -1,11 +1,13 @@
 // 差分の画面。上の「差分 / ファイル」で、同じ版のファイル全体と行き来する(開く前には選ばせない)。
-// 前後のファイルへは下のボタンか横スワイプ。切り替えと前後は履歴を積まない(「戻る」で一覧に戻れるように)。
+// 差分は変わったファイルぜんぶを縦につないで流し読みする(stream.js)。ファイルは 1 つずつで、
+// 前後へは下のボタンか横スワイプ。切り替えと前後は履歴を積まない(「戻る」で一覧に戻れるように)。
 import { esc } from "../../graph/rows.js";
-import { fileUrl, getDiff, getFile } from "../../lib/api.js";
-import { diffHtml, fileHtml } from "./diffbody.js";
-import { isMarkdown, mdDiffHtml, mdHtml } from "./md.js";
-import { changeNav, lines, swipe } from "./bars.js";
+import { fileUrl, getFile } from "../../lib/api.js";
+import { fileHtml } from "./diffbody.js";
+import { isMarkdown, mdHtml } from "./md.js";
+import { lines, swipe } from "./bars.js";
 import { sources } from "./sources.js";
+import { stream } from "./stream.js";
 
 const IMAGE = /\.(png|jpe?g|gif|webp|svg|ico)$/i;
 const flag = (k) => { try { return localStorage.getItem(k) !== "off"; } catch { return true; } };
@@ -51,6 +53,7 @@ async function load(el, r, ctx, mode) {
   const s = await sources(r);
   const i = Math.max(0, s.files.findIndex((f) => f.path === r.path && (!f.part || f.part === r.src)));
   const f = s.files[i] ?? { path: r.path };
+  if (mode === "diff") return loadStream(el, r, ctx, s, i);
   $(".sub").textContent = `${split(r.path)[1]} · ${s.title}`;
   $(".counts").innerHTML = f.add != null ? `<i class="n-add">+${f.add}</i> <i class="n-del">−${f.del ?? 0}</i>` : "";
   const hist = $(".hist-btn");
@@ -79,34 +82,16 @@ async function load(el, r, ctx, mode) {
       if ((b.dataset.md === "on") === mdOn()) return;
       try { localStorage.setItem("md", b.dataset.md); } catch { /* 今だけ切り替わる */ }
       syncMd();
-      paint(el, r, ctx, mode, s, f).catch((e) => { $(".page-body").innerHTML = `<p class="note err">${esc(e.message)}</p>`; });
+      paint(el, r, ctx, s, f).catch((e) => { $(".page-body").innerHTML = `<p class="note err">${esc(e.message)}</p>`; });
     };
   }
   syncMd();
-  await paint(el, r, ctx, mode, s, f);
+  await paint(el, r, ctx, s, f);
 }
 
-const textOf = async (repo, side) => (side ? (await getFile(repo, side.ref, side.path)).text ?? "" : "");
-
-async function paint(el, r, ctx, mode, s, f) {
+async function paint(el, r, ctx, s, f) {
   const body = el.querySelector(".page-body");
   const md = isMarkdown(r.path) && mdOn();
-  el.querySelector(".linebar").hidden = true;
-  if (mode === "diff") {
-    const args = s.diff(f);
-    if (!args) { body.innerHTML = '<p class="note">差分にできるコミットが見つからない</p>'; return; }
-    const note = args.note ? `<p class="note">${esc(args.note)}</p>` : "";
-    if (md && s.pair(f)) {
-      const p = s.pair(f);
-      const [a, b] = await Promise.all([textOf(r.repo, p.old), textOf(r.repo, p.new)]);
-      body.innerHTML = note + await mdDiffHtml(a, b, { repo: r.repo, ...(p.new ?? p.old) });
-      changeNav(el);
-      return;
-    }
-    const { note: _, ...a } = args;
-    body.innerHTML = note + diffHtml(await getDiff(r.repo, a));
-    return;
-  }
   const ref = s.ref(f);
   if (IMAGE.test(r.path)) { body.innerHTML = `<img class="img" alt="${esc(r.path)}" src="${fileUrl(r.repo, ref, r.path)}">`; return; }
   const d = await getFile(r.repo, ref, r.path);
@@ -114,4 +99,33 @@ async function paint(el, r, ctx, mode, s, f) {
   if (md) { body.innerHTML = await mdHtml(d.text, { repo: r.repo, ref, path: r.path }); return; }
   body.innerHTML = fileHtml(d.text, d.truncated);
   lines(el, r, ctx, d.sha);
+}
+
+// 差分の流し読み。見出しは元(コミット・ワークツリー)にし、ファイルごとの名前は流れの中の見出しに出す
+function loadStream(el, r, ctx, s, i) {
+  const $ = (q) => el.querySelector(q);
+  if (!s.files.length) { $(".page-body").innerHTML = '<p class="note">変わったファイルは無い</p>'; return; }
+  $("h2").textContent = s.title;
+  $(".sub").textContent = `${s.sub} · ${s.files.length} ファイル`;
+  const add = s.files.reduce((n, f) => n + (f.add ?? 0), 0), del = s.files.reduce((n, f) => n + (f.del ?? 0), 0);
+  $(".counts").innerHTML = `<i class="n-add">+${add}</i> <i class="n-del">−${del}</i>`;
+  const hasMd = s.files.some((f) => isMarkdown(f.path));
+  $(".md-seg").hidden = !hasMd;
+  let view = null;
+  const sync = () => {
+    for (const b of el.querySelectorAll(".md-seg button")) b.setAttribute("aria-pressed", String((b.dataset.md === "on") === mdOn()));
+    $(".wrap").hidden = s.files.every((f) => isMarkdown(f.path)) && mdOn();
+  };
+  const draw = (k) => { sync(); view = stream(el, r, ctx, s, k, mdOn()); };
+  for (const b of el.querySelectorAll(".view-seg button")) {
+    b.onclick = () => b.dataset.v === "file" && ctx.go({ ...s.route(view.current()), v: "file" }, { replace: true });
+  }
+  for (const b of el.querySelectorAll(".md-seg button")) {
+    b.onclick = () => {
+      if ((b.dataset.md === "on") === mdOn()) return;
+      try { localStorage.setItem("md", b.dataset.md); } catch { /* 今だけ切り替わる */ }
+      draw(s.files.indexOf(view.current())); // 読んでいたファイルの頭から描き直す
+    };
+  }
+  draw(i);
 }

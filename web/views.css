@@ -83,7 +83,8 @@ i { font-style: normal; }
 .wrap[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
 .counts { margin-left: auto; font-size: 12px; white-space: nowrap; }
 .page-body {
-  flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding-bottom: 72px;
+  position: relative; flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding-bottom: 72px;
+  overflow-anchor: none; /* 上のファイルが伸びたときの位置は stream.js が直す(二重に直さないよう止める) */
   font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; line-height: 20px;
 }
 .dl, .fl { display: flex; align-items: flex-start; min-width: max-content; }
@@ -102,6 +103,12 @@ i { font-style: normal; }
 .nonl { margin-left: 6px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 10px; }
 .hunk { padding: 4px 14px; background: var(--hunk-bg); color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fold { padding: 6px; background: var(--hunk-bg); color: var(--muted); text-align: center; font-family: 'IBM Plex Sans JP', system-ui, sans-serif; font-size: 12px; }
+/* 差分の流し読み。ファイルの見出しは、そのファイルを読んでいるあいだ上に貼り付き、タップでファイル表示へ */
+.df + .df { border-top: 6px solid var(--hunk-bg); }
+.df > .frow {
+  position: sticky; top: 0; left: 0; z-index: 2; min-height: 44px; padding: 6px 14px; background: var(--surface);
+  font-family: 'IBM Plex Sans JP', system-ui, sans-serif; line-height: 1.3;
+}
 .fl.sel { background: var(--accent-bg); }
 .fl.sel .ln { color: var(--accent); font-weight: 600; }
 .img { display: block; max-width: calc(100% - 32px); margin: 16px auto; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0 / 16px 16px; }

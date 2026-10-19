@@ -89,3 +89,27 @@ export async function mdDiffHtml(oldText, newText, at) {
   const [a, b] = await Promise.all([blocks(oldText), blocks(newText)]);
   return finish(blockDiff(a, b, split), at, "markdown rich");
 }
+
+// 差分の中の変わっていない段落を畳む(コードの差分が変わっていない行を畳むのと同じく、変わった所の前後 1 段落だけ残す)。
+// 長い文書の 1 行だけ直したときに、どこが変わったか探さずに済むように。畳んだ所はタップで開く
+const CHANGED = ".rd-add, .rd-del, .rd-mod, ins, del";
+export function foldUnchanged(root, keep = 1) {
+  const kids = [...root.children];
+  const hit = kids.map((k) => k.matches(CHANGED) || !!k.querySelector(CHANGED));
+  if (!hit.some(Boolean)) return;
+  const shown = kids.map((_, i) => hit.slice(Math.max(0, i - keep), i + keep + 1).some(Boolean));
+  for (let i = 0; i < kids.length;) {
+    if (shown[i]) { i++; continue; }
+    let j = i;
+    while (j < kids.length && !shown[j]) j++;
+    const run = kids.slice(i, j);
+    for (const k of run) k.hidden = true;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "fold";
+    b.textContent = `⋯ ${run.length} 段落は変わっていない`;
+    b.onclick = () => { for (const k of run) k.hidden = false; b.remove(); };
+    run[0].before(b);
+    i = j;
+  }
+}

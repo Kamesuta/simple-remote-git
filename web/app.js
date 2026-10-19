@@ -41,7 +41,13 @@ function back() {
   else go(parent(route()), { replace: true });
 }
 
-const ctx = { go, back, github: graph.github, findCommit: graph.findCommit, root: () => root };
+// 流し読みで読んでいるファイルが変わったときに、画面を作り直さずに # だけ差し替える
+function mark(r) {
+  history.replaceState(history.state, "", build(r));
+  layerKey = build(route());
+}
+
+const ctx = { go, back, mark, github: graph.github, findCommit: graph.findCommit, root: () => root };
 
 function header(repo) {
   const r = repos.find((x) => x.name === repo) ?? { name: repo };
