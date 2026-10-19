@@ -47,7 +47,7 @@ function mark(r) {
   layerKey = build(route());
 }
 
-const ctx = { go, back, mark, github: graph.github, findCommit: graph.findCommit, root: () => root };
+const ctx = { go, back, mark, github: graph.github, findCommit: graph.findCommit, neighbor: graph.neighbor, root: () => root };
 
 function header(repo) {
   const r = repos.find((x) => x.name === repo) ?? { name: repo };

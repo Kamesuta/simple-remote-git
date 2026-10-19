@@ -91,3 +91,10 @@ export const wipTotal = () => (data?.commits ?? []).filter((c) => c.kind === "wi
   .reduce((n, c) => n + c.staged + c.modified + c.untracked, 0);
 export const rowAt = (i) => data?.commits[i];
 export const findCommit = (h) => data?.commits.find((c) => c.h === h);
+
+// 差分の画面を左右に送ったときの、グラフで隣のコミット(未コミットとスタッシュの行は飛ばす)。d = 1 で 1 行下(古い方)
+export function neighbor(h, d) {
+  const cs = (data?.commits ?? []).filter((c) => c.kind === "commit");
+  const i = cs.findIndex((c) => c.h.startsWith(h));
+  return i < 0 ? null : cs[i + d] ?? null;
+}

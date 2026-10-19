@@ -26,7 +26,7 @@ async function bodyHtml(r, s, f, md) {
   return head + diffHtml(await getDiff(r.repo, a));
 }
 
-export function stream(el, r, ctx, s, start, md) {
+export function stream(el, r, ctx, s, start, md, hint = "") {
   const body = el.querySelector(".page-body");
   const files = s.files;
   body.innerHTML = files.map((f, i) => `<section class="df" data-i="${i}">${fileRow(f, `data-open="${i}"`)}`
@@ -72,6 +72,7 @@ export function stream(el, r, ctx, s, start, md) {
     const prev = files[i - 1], next = files[i + 1];
     nav.querySelector(".prev").textContent = prev ? `‹ ${name(prev.path)}` : "";
     nav.querySelector(".next").textContent = next ? `${name(next.path)} ›` : "";
+    nav.querySelector(".hint").hidden = !!(prev && next); // 両側にファイル名が並ぶと案内の入る幅が無い
     // 「戻る」やホーム画面からの開き直しで同じファイルに戻れるよう、# だけ静かに差し替える(Safari は回数に上限があるので間引く)
     clearTimeout(timer);
     timer = setTimeout(() => ctx.mark(s.route(files[i])), 400);
@@ -88,8 +89,8 @@ export function stream(el, r, ctx, s, start, md) {
     onScroll();
   };
 
-  nav.hidden = files.length < 2;
-  nav.querySelector(".hint").hidden = true;
+  nav.hidden = files.length < 2 && !hint;
+  nav.querySelector(".hint").textContent = hint;
   nav.querySelector(".prev").onclick = () => cur > 0 && jump(cur - 1);
   nav.querySelector(".next").onclick = () => cur + 1 < files.length && jump(cur + 1);
   body.addEventListener("click", (e) => {

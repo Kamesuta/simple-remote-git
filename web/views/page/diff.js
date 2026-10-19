@@ -2,7 +2,7 @@
 // 差分は変わったファイルぜんぶを縦につないで流し読みする(stream.js)。ファイルは 1 つずつで、
 // 前後へは下のボタンか横スワイプ。切り替えと前後は履歴を積まない(「戻る」で一覧に戻れるように)。
 import { esc } from "../../graph/rows.js";
-import { fileUrl, getFile } from "../../lib/api.js";
+import { fileUrl, getCommit, getFile } from "../../lib/api.js";
 import { fileHtml } from "./diffbody.js";
 import { isMarkdown, mdHtml } from "./md.js";
 import { lines, swipe } from "./bars.js";
@@ -14,10 +14,12 @@ const flag = (k) => { try { return localStorage.getItem(k) !== "off"; } catch { 
 const wrapOn = () => flag("wrap");
 const mdOn = () => flag("md"); // Markdown を整形して見せるか(既定は整形。GitHub の Rich Diff と同じ見え方)
 const split = (p) => { const name = p.split("/").pop(); return [name, p.slice(0, -name.length) || "./"]; };
+let enter = ""; // 前のコミットへ送ったときは左から入れる(送った向きと画面の動きを合わせる)
 
 export function diffPage(r, ctx) {
   const el = document.createElement("section");
-  el.className = "page";
+  el.className = `page${enter}`;
+  enter = "";
   const [name, dir] = split(r.path);
   const mode = r.v === "file" ? "file" : "diff";
   el.innerHTML = `
@@ -116,7 +118,8 @@ function loadStream(el, r, ctx, s, i) {
     for (const b of el.querySelectorAll(".md-seg button")) b.setAttribute("aria-pressed", String((b.dataset.md === "on") === mdOn()));
     $(".wrap").hidden = s.files.every((f) => isMarkdown(f.path)) && mdOn();
   };
-  const draw = (k) => { sync(); view = stream(el, r, ctx, s, k, mdOn()); };
+  const draw = (k) => { sync(); view = stream(el, r, ctx, s, k, mdOn(), r.src === "commit" ? "左右に送ると前後のコミット" : ""); };
+  if (r.src === "commit") swipe($(".page-body"), () => toCommit(r, ctx, 1), () => toCommit(r, ctx, -1));
   for (const b of el.querySelectorAll(".view-seg button")) {
     b.onclick = () => b.dataset.v === "file" && ctx.go({ ...s.route(view.current()), v: "file" }, { replace: true });
   }
@@ -128,4 +131,16 @@ function loadStream(el, r, ctx, s, i) {
     };
   }
   draw(i);
+}
+
+// 左に送ると 1 行下(古い方)、右に送ると 1 行上(新しい方)のコミットの差分へ。並びはグラフの行と同じ。
+// 変わったファイルの無いコミット(空のマージなど)は飛ばす。履歴は積まない(「戻る」で一覧に戻れるように)
+async function toCommit(r, ctx, d) {
+  for (let c = ctx.neighbor(r.h, d); c; c = ctx.neighbor(c.h, d)) {
+    const [f] = (await getCommit(r.repo, c.h)).files;
+    if (!f) continue;
+    enter = d < 0 ? " from-left" : "";
+    ctx.go({ repo: r.repo, view: "diff", src: "commit", h: c.h, path: f.path, old: f.old }, { replace: true });
+    return;
+  }
 }

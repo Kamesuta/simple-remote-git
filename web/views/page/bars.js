@@ -24,13 +24,13 @@ export function lines(el, r, ctx, sha) {
 }
 
 export function swipe(target, onLeft, onRight) {
-  let x0 = null, y0 = null;
-  target.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  let x0 = null, y0 = null, sl = 0;
+  target.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; sl = target.scrollLeft; }, { passive: true });
   target.addEventListener("touchend", (e) => {
     if (x0 == null) return;
     const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
     x0 = null;
-    // 横長のコードを横に送っているときと見分けるため、縦の動きが小さく十分長いときだけ
-    if (Math.abs(dx) > 80 && Math.abs(dy) < 40 && target.scrollLeft === 0) (dx < 0 ? onLeft : onRight)();
+    // 横長のコードを横に送っているときと見分けるため、縦の動きが小さく十分長く、中身が横に動かなかったときだけ
+    if (Math.abs(dx) > 80 && Math.abs(dy) < 40 && target.scrollLeft === sl) (dx < 0 ? onLeft : onRight)();
   }, { passive: true });
 }

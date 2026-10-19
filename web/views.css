@@ -130,3 +130,5 @@ i { font-style: normal; }
 @keyframes up { from { transform: translateY(100%); } }
 @keyframes fade { from { opacity: 0; } }
 @keyframes slide { from { transform: translateX(24px); opacity: 0; } }
+.page.from-left { animation-name: slide-back; }
+@keyframes slide-back { from { transform: translateX(-24px); opacity: 0; } }
