@@ -6,6 +6,7 @@ remote が 1 つも無いリポは、全部が未プッシュになってしま�
 import re
 from pathlib import Path
 
+import worktree
 from gitdata import _git
 
 # グラフは 400 件ほど。未プッシュがそれを超えることはまず無いので、上限で打ち切って重くしない
@@ -14,7 +15,7 @@ _TRACK = re.compile(r"(ahead|behind) (\d+)")
 
 
 def unpushed(repo: Path) -> set[str]:
-    r = _git(repo, "rev-list", "--exclude=refs/stash", "--all", "--not", "--remotes", f"-n{_LIMIT}")
+    r = _git(repo, "rev-list", *worktree.tips(repo), "--not", "--remotes", f"-n{_LIMIT}")
     return set(r.stdout.split()) if r.returncode == 0 else set()
 
 

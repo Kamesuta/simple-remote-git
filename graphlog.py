@@ -1,9 +1,10 @@
-"""グラフ用のログ(git log --all --topo-order)を読み、ref を種類付きに分ける。
+"""グラフ用のログ(git log --topo-order。根は worktree.tips)を読み、ref を種類付きに分ける。
 
 ワークツリーの印・未コミット・スタッシュは worktree.decorate、未プッシュの印は pushstate.mark が後から足す。
 """
 from pathlib import Path
 
+import worktree
 from gitdata import _git, _origin, fetched_at, github_url
 
 
@@ -42,7 +43,7 @@ def parse_log(text: str, remotes: set[str] = frozenset({"origin"})) -> list[dict
 def graph(repo: Path, limit: int = 400) -> dict:
     rs = _git(repo, "remote")
     remotes = set(rs.stdout.split()) if rs.returncode == 0 else set()
-    r = _git(repo, "log", "--exclude=refs/stash", "--all", "--topo-order", f"-n{int(limit)}",
+    r = _git(repo, "log", *worktree.tips(repo), "--topo-order", f"-n{int(limit)}",
              f"--format={LOG_FORMAT}")
     if r.returncode != 0:
         raise RuntimeError(r.stderr.strip() or "git log が失敗")

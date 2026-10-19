@@ -26,6 +26,23 @@ class Mark(TmpCase):
         head = next(r for r in top["refs"] if r["t"] == "head")
         self.assertEqual((head["ahead"], head["behind"]), (1, 0))
 
+    def test_archived_refs_stay_out_but_detached_worktree_shows(self):
+        # 退避した ref(refs/archive)の先だけにあるコミットは、グラフにも未プッシュにも出さない
+        git(self.repo, "checkout", "-q", "-b", "old")
+        (self.repo / "a.txt").write_text("old")
+        git(self.repo, "commit", "-qam", "archived")
+        git(self.repo, "update-ref", "refs/archive/old", "HEAD")
+        git(self.repo, "checkout", "-q", "main")
+        git(self.repo, "branch", "-qD", "old")
+        # HEAD を切り離したワークツリーのコミットは出す
+        git(self.repo, "worktree", "add", "-q", "--detach", str(self.root / "wt"))
+        (self.root / "wt" / "a.txt").write_text("wt")
+        git(self.root / "wt", "commit", "-qam", "detached")
+        subjects = [c["s"] for c in self.graph()]
+        self.assertNotIn("archived", subjects)
+        self.assertIn("detached", subjects)
+        self.assertEqual(len(pushstate.unpushed(self.repo)), 1)
+
     def test_no_remote_leaves_no_marks(self):
         git(self.repo, "remote", "remove", "origin")
         self.assertNotIn("pushed", self.graph()[0])

@@ -43,6 +43,13 @@ def worktrees(repo: Path) -> list[dict]:
     return parse_worktrees(r.stdout) if r.returncode == 0 else []
 
 
+def tips(repo: Path) -> list[str]:
+    """グラフと未プッシュの根: ブランチ・タグ・リモートと、各ワークツリーの HEAD(切り離した HEAD も)。
+    --all は使わない。refs/archive に退避したブランチや filter-branch の refs/original まで載ってしまうため。
+    HEAD という名前でなく SHA で渡すのは、コミットの無いリポで git log が失敗しないようにするため。"""
+    return ["--branches", "--tags", "--remotes", *(w["head"] for w in worktrees(repo) if w.get("head"))]
+
+
 def wip_counts(path: str) -> dict | None:
     """未コミットの数。--no-optional-locks で index を書き換えない
     (書き換えると index の mtime が動き、見ただけで「最近使った」の順位が上がってしまう)。"""
